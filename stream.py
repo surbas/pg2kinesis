@@ -1,17 +1,21 @@
-from time import sleep
+from time import sleep, time
 
 import aws_kinesis_agg.aggregator
 import boto3
+
 from botocore.exceptions import ClientError
 from .log import logger
 
 class StreamWriter(object):
-    def __init__(self, stream_name, back_off_limit=60):
+    def __init__(self, stream_name, back_off_limit=60, send_window=13):
         self.stream_name = stream_name
         self.kinesis = boto3.client('kinesis')
         self.back_off_limit = back_off_limit
         self._sequence_number_for_ordering = '0'
         self._record_agg = aws_kinesis_agg.aggregator.RecordAggregator()
+        self._send_window = send_window
+
+        self.last_send = 0
 
         try:
             self.kinesis.create_stream(StreamName=stream_name, ShardCount=1)
@@ -27,24 +31,27 @@ class StreamWriter(object):
         waiter.wait(StreamName=self.stream_name)
 
     def put_message(self, fmt_msg):
-        agro = None
+        agg_record = None
 
         if fmt_msg:
-            agro = self._record_agg.add_user_record(fmt_msg.change.xid, fmt_msg.fmt_msg)
+            agg_record = self._record_agg.add_user_record(fmt_msg.change.xid, fmt_msg.fmt_msg)
 
-        # will be and object once the agg is full.
-        if agro is not None:
-            self._send_agg_record(agro)
-            self._record_agg = aws_kinesis_agg.aggregator.RecordAggregator()
+        # agg_record will be a complete record if aggregation is full.
+        if agg_record or (self._send_window and time() - self.last_send > self._send_window):
+            agg_record = agg_record if agg_record else self._record_agg.clear_and_get()
+            self._send_agg_record(agg_record)
+            self.last_send = time()
 
-        return agro
+        return agg_record
 
     def _send_agg_record(self, agg_record):
         if agg_record is None:
             return
 
-        logger.info('Sending %s records' % agg_record.get_num_user_records())
         pk, ehk, data = agg_record.get_contents()
+        logger.info('Sending %s records. Size %s. PK: %s' %
+                    (agg_record.get_num_user_records(), agg_record.get_size_bytes(), pk))
+
         back_off = .05
         while True:
             try:
@@ -63,5 +70,5 @@ class StreamWriter(object):
                     logger.error(e)
                     raise
             else:
-                logger.debug('Sequnce number: %s' % result['SequenceNumber'])
+                logger.debug('Sequence number: %s' % result['SequenceNumber'])
                 break

@@ -3,14 +3,15 @@ import psycopg2.extensions
 import psycopg2.errorcodes
 from collections import namedtuple
 
+import threading
 from psycopg2.extras import NamedTupleCursor
 
 from .log import logger
 
-psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
-psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
+psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, None)
+psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY, None)
 
-PrimaryKeyMapItem = namedtuple('PrimaryKeyMapItem', 'table_name, col_name, col_type, col_ord_pos')
+PrimaryKeyMapItem = namedtuple(u'PrimaryKeyMapItem', u'table_name, col_name, col_type, col_ord_pos')
 
 
 class SlotReader(object):
@@ -29,30 +30,74 @@ class SlotReader(object):
                  ) as q using (table_catalog, table_schema, table_name)
                  ORDER BY ordinal_position;"""
 
-    def __init__(self, database, host, port, user, slot_name):
+    def __init__(self, database, host, port, user, slot_name, keepalive_window=30):
         # Cool fact: using connections as context manager doesn't close them on success after leaving with block
         self._db_confg = dict(database=database, host=host, port=port, user=user)
-        self._repl_conn = self._get_connection(connection_factory=psycopg2.extras.LogicalReplicationConnection)
-        self._conn = self._get_connection()
-        self._cursor = self._repl_conn.cursor()
-
+        self._keepalive_window = keepalive_window
+        self._repl_conn = None
+        self._repl_cursor = None
+        self._normal_conn = None
         self.slot_name = slot_name
         self.cur_lag = 0
 
     def __enter__(self):
+        self._normal_conn = self._get_connection()
+        self._normal_conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+        self._repl_conn = self._get_connection(connection_factory=psycopg2.extras.LogicalReplicationConnection)
+        self._repl_cursor = self._repl_conn.cursor()
+
+        if self._keepalive_window:
+            self._keepalive_thread = self._keep_alive()
+
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._cursor.close()
-        self._repl_conn.close()
-        self._conn.close()
+        """
+        Be a good citezen and try to clean up on the way out.
+        """
+        if self._keepalive_thread:
+            try:
+                self._keepalive_thread.join(timeout=self._keepalive_window+3)
+            except Exception:
+                pass
+
+        try:
+            self._repl_cursor.close()
+        except Exception:
+            pass
+
+        try:
+            self._repl_conn.close()
+        except Exception:
+            pass
+
+        try:
+            self._normal_conn.close()
+        except Exception:
+            pass
+
+
+    def _keep_alive(self):
+
+        # keepalive with no args.
+        try:
+            self._repl_cursor.send_feedback()
+        except Exception as e:
+            logger.exception(e)
+            pass
+
+        # schedule myself in the future
+        t = threading.Timer(self._keepalive_window, self._keep_alive)
+        t.daemon = True
+        t.start()
+        return t
 
     def _get_connection(self, connection_factory=None, cursor_factory=None):
         return psycopg2.connect(connection_factory=connection_factory, cursor_factory=cursor_factory, **self._db_confg)
 
     def _execute_and_fetch(self, sql, *params):
 
-        with self._conn.cursor() as cur:
+        with self._normal_conn.cursor() as cur:
             if params:
                 cur.execute(sql, params)
             else:
@@ -60,8 +105,9 @@ class SlotReader(object):
 
             return cur.fetchall()
 
+    @property
     def primary_key_map(self):
-        logger.info('Getting primary key map')
+        logger.info(u'Getting primary key map')
         result = map(PrimaryKeyMapItem._make, self._execute_and_fetch(SlotReader.PK_SQL))
         pk_map = {rec.table_name: rec for rec in result}
 
@@ -69,31 +115,32 @@ class SlotReader(object):
         return pk_map
 
     def create_slot(self):
-        logger.info('Creating slot %s' % self.slot_name)
+        logger.info(u'Creating slot %s' % self.slot_name)
         try:
-            self._cursor.create_replication_slot(self.slot_name,
-                                                 slot_type=psycopg2.extras.REPLICATION_LOGICAL,
-                                                 output_plugin='test_decoding')
+            self._repl_cursor.create_replication_slot(self.slot_name,
+                                                      slot_type=psycopg2.extras.REPLICATION_LOGICAL,
+                                                      output_plugin=u'test_decoding')
         except psycopg2.ProgrammingError as p:
             # Will be raised if slot exists already.
             if p.pgcode != psycopg2.errorcodes.DUPLICATE_OBJECT:
                 logger.error(p)
                 raise
             else:
-                logger.info('Slot %s is already present.' % self.slot_name)
+                logger.info(u'Slot %s is already present.' % self.slot_name)
 
     def delete_slot(self):
-        logger.info('Deleting slot %s' % self.slot_name)
+        logger.info(u'Deleting slot %s' % self.slot_name)
         try:
-            self._cursor.drop_replication_slot(self.slot_name)
+            self._repl_cursor.drop_replication_slot(self.slot_name)
         except psycopg2.ProgrammingError as p:
             # Will be raised if slot exists already.
             if p.pgcode != psycopg2.errorcodes.UNDEFINED_OBJECT:
                 logger.error(p)
                 raise
             else:
-                logger.info('Slot %s was not found.' % self.slot_name)
+                logger.info(u'Slot %s was not found.' % self.slot_name)
 
     def process_replication_stream(self, consume):
-        self._cursor.start_replication(self.slot_name)
-        self._cursor.consume_stream(consume)
+        logger.info(u'Starting consuming slot %s' % self.slot_name)
+        self._repl_cursor.start_replication(self.slot_name)
+        self._repl_cursor.consume_stream(consume)

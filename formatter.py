@@ -61,7 +61,9 @@ class Formatter(object):
                         pkey = mat.groups()[0]
                         return Change(xid=self.cur_xact, table=table_name, operation=rec[2][:-1], pkey=pkey)
                     else:
-                        self._log_and_raise(u'Unable to locate primary key for table "{}"'.format(table_name))
+                        # TODO: make this an error or warning.
+                        # self._log_and_raise(u'Unable to locate primary key for table "{}"'.format(table_name))
+                        pass
         else:
             self._log_and_raise(u'Unknown change: "{}"'.format(change))
 

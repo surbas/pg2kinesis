@@ -47,7 +47,7 @@ class SlotReader(object):
         self._repl_cursor = self._repl_conn.cursor()
 
         if self._keepalive_window:
-            self._keepalive_thread = self._keep_alive()
+            self._keepalive_thread = self._send_keepalive()
 
         return self
 
@@ -77,17 +77,19 @@ class SlotReader(object):
             pass
 
 
-    def _keep_alive(self):
+    def _send_keepalive(self):
 
         # keepalive with no args.
         try:
             self._repl_cursor.send_feedback()
+        except psycopg2.DatabaseError as e:
+            if not e.message == 'no COPY in progress\n':
+                logger.exception(e)
         except Exception as e:
             logger.exception(e)
-            pass
 
         # schedule myself in the future
-        t = threading.Timer(self._keepalive_window, self._keep_alive)
+        t = threading.Timer(self._keepalive_window, self._send_keepalive)
         t.daemon = True
         t.start()
         return t
@@ -141,6 +143,6 @@ class SlotReader(object):
                 logger.info(u'Slot %s was not found.' % self.slot_name)
 
     def process_replication_stream(self, consume):
-        logger.info(u'Starting consuming slot %s' % self.slot_name)
+        logger.info(u'Starting the consumption of slot "%s"!' % self.slot_name)
         self._repl_cursor.start_replication(self.slot_name)
         self._repl_cursor.consume_stream(consume)

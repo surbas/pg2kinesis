@@ -1,12 +1,12 @@
 from __future__ import unicode_literals
 
+from collections import namedtuple
+import threading
+
+
 import psycopg2
 import psycopg2.extensions
 import psycopg2.errorcodes
-from collections import namedtuple
-
-import threading
-from psycopg2.extras import NamedTupleCursor
 
 from .log import logger
 

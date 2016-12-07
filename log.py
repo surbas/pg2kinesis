@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 import logging
 
-FORMAT = '%(asctime)-15s %(level)s %(message)s'
+FORMAT = '%(asctime)-15s %(levelname)s %(message)s'
 logging.basicConfig(format=FORMAT)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)

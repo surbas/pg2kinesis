@@ -113,7 +113,6 @@ class SlotReader(object):
         result = map(PrimaryKeyMapItem._make, self._execute_and_fetch(SlotReader.PK_SQL))
         pk_map = {rec.table_name: rec for rec in result}
 
-        # generator that returns tuples of table_name, primary_key_col
         return pk_map
 
     def create_slot(self):

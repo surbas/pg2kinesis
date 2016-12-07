@@ -6,7 +6,7 @@ import sys
 
 from .log import logger
 
-from backport_collections import namedtuple
+from collections import namedtuple
 
 # Tuples representing changes as pulled from database
 Change = namedtuple('Change', 'xid, table, operation, pkey')

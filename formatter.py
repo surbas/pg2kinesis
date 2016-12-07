@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import json
 import re
 import sys
@@ -7,17 +9,17 @@ from .log import logger
 from backport_collections import namedtuple
 
 # Tuples representing changes as pulled from database
-Change = namedtuple(u'Change', u'xid, table, operation, pkey')
+Change = namedtuple('Change', 'xid, table, operation, pkey')
 
 # Final product of Formatter, a Change and the Change formatted.
-Message = namedtuple(u'Message', u'change, fmt_msg')
+Message = namedtuple('Message', 'change, fmt_msg')
 
 COL_TYPE_VALUE_TEMPLATE_PAT = ur"{col_name}\[{col_type}\]:'?([\w\-]+)'?"
 
 class Formatter(object):
     VERSION = 0
-    TYPE = u'CDC'
-    IGNORED_CHANGES = {u'COMMIT'}
+    TYPE = 'CDC'
+    IGNORED_CHANGES = {'COMMIT'}
 
     def __init__(self, primary_key_map, full_change=False, table_pat=None):
         self._primary_key_patterns = {}
@@ -44,28 +46,28 @@ class Formatter(object):
 
         rec = change.split(' ', 3)
 
-        if rec[0] == u'BEGIN':
+        if rec[0] == 'BEGIN':
             self.cur_xact = rec[1]
         elif rec[0] in self.IGNORED_CHANGES:
             pass
-        elif rec[0] == u'table':
+        elif rec[0] == 'table':
             table_name = rec[1][:-1]
 
             if self.table_re.search(table_name):
                 try:
                     mat = self._primary_key_patterns[rec[1]].search(rec[3])
                 except KeyError:
-                    self._log_and_raise(u'Unable to locate table: "{}"'.format(rec[1]))
+                    self._log_and_raise('Unable to locate table: "{}"'.format(rec[1]))
                 else:
                     if mat:
                         pkey = mat.groups()[0]
                         return Change(xid=self.cur_xact, table=table_name, operation=rec[2][:-1], pkey=pkey)
                     else:
                         # TODO: make this an error or warning.
-                        # self._log_and_raise(u'Unable to locate primary key for table "{}"'.format(table_name))
+                        # self._log_and_raise('Unable to locate primary key for table "{}"'.format(table_name))
                         pass
         else:
-            self._log_and_raise(u'Unknown change: "{}"'.format(change))
+            self._log_and_raise('Unknown change: "{}"'.format(change))
 
     @staticmethod
     def _log_and_raise(msg):

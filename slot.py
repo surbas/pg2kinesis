@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import psycopg2
 import psycopg2.extensions
 import psycopg2.errorcodes
@@ -11,11 +13,11 @@ from .log import logger
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, None)
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY, None)
 
-PrimaryKeyMapItem = namedtuple(u'PrimaryKeyMapItem', u'table_name, col_name, col_type, col_ord_pos')
+PrimaryKeyMapItem = namedtuple('PrimaryKeyMapItem', 'table_name, col_name, col_type, col_ord_pos')
 
 
 class SlotReader(object):
-    PK_SQL = u"""SELECT CONCAT(table_schema, '.', table_name), column_name, data_type, ordinal_position
+    PK_SQL = """SELECT CONCAT(table_schema, '.', table_name), column_name, data_type, ordinal_position
                  FROM information_schema.tables
                  LEFT JOIN (
                      SELECT CONCAT(table_schema, '.', table_name), column_name, data_type, c.ordinal_position,
@@ -109,7 +111,7 @@ class SlotReader(object):
 
     @property
     def primary_key_map(self):
-        logger.info(u'Getting primary key map')
+        logger.info('Getting primary key map')
         result = map(PrimaryKeyMapItem._make, self._execute_and_fetch(SlotReader.PK_SQL))
         pk_map = {rec.table_name: rec for rec in result}
 
@@ -117,21 +119,21 @@ class SlotReader(object):
         return pk_map
 
     def create_slot(self):
-        logger.info(u'Creating slot %s' % self.slot_name)
+        logger.info('Creating slot %s' % self.slot_name)
         try:
             self._repl_cursor.create_replication_slot(self.slot_name,
                                                       slot_type=psycopg2.extras.REPLICATION_LOGICAL,
-                                                      output_plugin=u'test_decoding')
+                                                      output_plugin='test_decoding')
         except psycopg2.ProgrammingError as p:
             # Will be raised if slot exists already.
             if p.pgcode != psycopg2.errorcodes.DUPLICATE_OBJECT:
                 logger.error(p)
                 raise
             else:
-                logger.info(u'Slot %s is already present.' % self.slot_name)
+                logger.info('Slot %s is already present.' % self.slot_name)
 
     def delete_slot(self):
-        logger.info(u'Deleting slot %s' % self.slot_name)
+        logger.info('Deleting slot %s' % self.slot_name)
         try:
             self._repl_cursor.drop_replication_slot(self.slot_name)
         except psycopg2.ProgrammingError as p:
@@ -140,9 +142,9 @@ class SlotReader(object):
                 logger.error(p)
                 raise
             else:
-                logger.info(u'Slot %s was not found.' % self.slot_name)
+                logger.info('Slot %s was not found.' % self.slot_name)
 
     def process_replication_stream(self, consume):
-        logger.info(u'Starting the consumption of slot "%s"!' % self.slot_name)
+        logger.info('Starting the consumption of slot "%s"!' % self.slot_name)
         self._repl_cursor.start_replication(self.slot_name)
         self._repl_cursor.consume_stream(consume)

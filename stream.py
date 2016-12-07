@@ -22,7 +22,7 @@ class StreamWriter(object):
             self._kinesis.create_stream(StreamName=stream_name, ShardCount=1)
         except ClientError as e:
             # ResourceInUseException is raised when the stream already exists
-            if e.response["Error"]["Code"] != "ResourceInUseException":
+            if e.response['Error']['Code'] != 'ResourceInUseException':
                 logger.error(e)
                 raise
 

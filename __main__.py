@@ -1,10 +1,7 @@
 from __future__ import division
-from __future__ import unicode_literals
-
 import time
 
 import click
-click.disable_unicode_literals_warning = True
 
 from .slot import SlotReader
 from .formatter import get_formatter

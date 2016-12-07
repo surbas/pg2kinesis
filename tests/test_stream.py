@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 import time
 
 from freezegun import freeze_time

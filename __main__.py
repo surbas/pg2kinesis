@@ -1,7 +1,10 @@
+from __future__ import division
+from __future__ import unicode_literals
+
 import time
-import sys
 
 import click
+click.disable_unicode_literals_warning = True
 
 from .slot import SlotReader
 from .formatter import get_formatter
@@ -17,14 +20,13 @@ from .log import logger
 @click.option('--stream-name', '-k', default='pg2kinesis', help='Kinesis stream name.')
 @click.option('--message-formatter', '-f', default='CSVPayload', help='Kinesis record formatter.')
 @click.option('--table-pat', help='Optional regular expression for table names.')
-@click.option('--replication-feedback-window', '-r', default=10, type=click.IntRange(0, sys.maxint),
-              help='How often in seconds to send keep alive feedback. 0 to Disable.')
 @click.option('--full-change', default=False, is_flag=True, help='Not yet implemented.')
 @click.option('--create-slot', default=False, is_flag=True, help='Attempt to on start create a the slot.')
 @click.option('--recreate-slot', default=False, is_flag=True,
               help='Deletes the slot on start if it exists and then creates.')
-def main(pg_dbname, pg_host, pg_port, pg_user, pg_slot_name, stream_name, message_formatter, table_pat,
-         replication_feedback_window, full_change, create_slot, recreate_slot):
+
+def main(pg_dbname, pg_host, pg_port, pg_user, pg_slot_name, stream_name,
+         message_formatter, table_pat, full_change, create_slot, recreate_slot):
     logger.info('Starting pg2kinesis')
 
     if full_change:
@@ -38,20 +40,19 @@ def main(pg_dbname, pg_host, pg_port, pg_user, pg_slot_name, stream_name, messag
         if recreate_slot:
             reader.delete_slot()
             reader.create_slot()
-
-        if create_slot:
+        elif create_slot:
             reader.create_slot()
 
         pk_map = reader.primary_key_map
         formatter = get_formatter(message_formatter, pk_map, full_change, table_pat)
 
-        consume = Consume(formatter, writer, replication_feedback_window)
+        consume = Consume(formatter, writer)
 
         # Blocking. Responds to Control-C.
         reader.process_replication_stream(consume)
 
 class Consume(object):
-    def __init__(self, formatter, writer, replication_feedback_window=10):
+    def __init__(self, formatter, writer):
         self.cum_msg_count = 0
         self.cum_msg_size = 0
         self.msg_window_size = 0
@@ -60,8 +61,6 @@ class Consume(object):
 
         self.formatter = formatter
         self.writer = writer
-
-        self.replication_feedback_window = replication_feedback_window
 
     def __call__(self, change):
         self.cum_msg_count += 1
@@ -75,16 +74,16 @@ class Consume(object):
         if did_put:
             change.cursor.send_feedback(flush_lsn=change.data_start)
             logger.info('Flushed LSN: {}'.format(change.data_start))
-        elif self.replication_feedback_window:
-            int_time = int(time.time())
-            if not int_time % self.replication_feedback_window and int_time != self.cur_window:
-                logger.info('xid: {:10} win_c:{:>12} win_s:{:>12}mb cum_c:{:>16} cum_s:{:>16}mb'.format(
-                    self.formatter.cur_xact, self.msg_window_count, self.msg_window_size / 1048576,
-                    self.cum_msg_count, self.cum_msg_size / 1048576))
 
-                self.cur_window = int_time
-                self.msg_window_size = 0
-                self.msg_window_count = 0
+        int_time = int(time.time())
+        if not int_time % 10 and int_time != self.cur_window:
+            logger.info('xid: {:12} win_count:{:>10} win_size:{:>10}mb cum_count:{:>10} cum_size:{:>10}mb'.format(
+                self.formatter.cur_xact, self.msg_window_count, self.msg_window_size / 1048576,
+                self.cum_msg_count, self.cum_msg_size / 1048576))
+
+            self.cur_window = int_time
+            self.msg_window_size = 0
+            self.msg_window_count = 0
 
 if __name__ == '__main__':
     main()

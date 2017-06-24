@@ -4,7 +4,7 @@ import pytest
 import psycopg2
 import psycopg2.errorcodes
 
-from ..slot import SlotReader
+from pg2kinesis.slot import SlotReader
 
 
 @pytest.fixture

@@ -5,8 +5,8 @@ import json
 import mock
 import pytest
 
-from ..slot import PrimaryKeyMapItem
-from ..formatter import Change, CSVFormatter, CSVPayloadFormatter, Formatter, get_formatter
+from pg2kinesis.slot import PrimaryKeyMapItem
+from pg2kinesis.formatter import Change, CSVFormatter, CSVPayloadFormatter, Formatter, get_formatter
 
 
 def get_formatter_produce_formatted_message(cls):

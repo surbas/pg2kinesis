@@ -1,0 +1,11 @@
+aws_kinesis_agg==1.0.1
+boto3==1.4.1
+botocore==1.4.64
+click==6.3.0
+freezegun==0.3.6
+ipdb==0.10.2
+ipython<6.0.0,>=0.10.2
+protobuf==3.0.0
+psycopg2==2.7.1
+pytest==3.0.4
+mock==2.0.0

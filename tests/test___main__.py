@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 from mock import Mock, call
 
-from ..__main__ import Consume
+from pg2kinesis.__main__ import Consume
 
 def test_consume():
     mock_formatter = Mock(return_value='fmt_msg')

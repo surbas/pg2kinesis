@@ -6,7 +6,7 @@ import pytest
 import boto3
 from botocore.exceptions import ClientError
 
-from ..stream import StreamWriter
+from pg2kinesis.stream import StreamWriter
 
 @pytest.fixture()
 def writer():

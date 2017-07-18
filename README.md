@@ -84,8 +84,7 @@ pg2kinesis is based on the ideas of others including:
 
 ## ~roadmap~
 Future Road Map:
- - Upgrade to release 2.7 of psycopg2
- - package up for cheese shop
+ - Package up for cheese shop
  - Allow payload format to be specified on Command Line.
  - Allow HUPing to notify utility to regenerate primary key cache
  - Support above on a schedule specified via commandline with sensible default of once an hour.

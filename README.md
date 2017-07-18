@@ -27,7 +27,7 @@ output plugin. What is special about our utility is it takes the output of the t
 on a formatter you can define guarantees publishing to Kinesis stream, 
 in *transaction commit time order* with a guarantees that *no data will be lost*.  
 
-## ~installation~
+## installation
 
 Currently we only support cloning or downloading a zip for installation.
 
@@ -42,11 +42,11 @@ Cloning install:
  1. `pip install -r pg2kinesis` 
 
 
-## ~tests~
+## tests
 
 To run tests simply call `pytest` from installation directory.
 
-## ~usage~
+## usage
 
  Run `python -m pg2kinesis --help` to get a list of the latest command line options. By default pg2kinesis attempts to 
  connect to a local postgres instance and publish to a stream named `pg2kinesis` on to whatever AWS account is currently
@@ -74,7 +74,7 @@ To run tests simply call `pytest` from installation directory.
  Here is an example of how Handshake runs pg2kinesis in production:
  `<TODO>`
 
-## ~shoutouts~
+## shoutouts
 pg2kinesis is based on the ideas of others including:
 - Logical Decoding: a new world of data exchange applications for Postgres SQL [(slides)](https://www.slideshare.net/8kdata/postgresql-logical-decoding)
 - psycopg2 [(main)](http://initd.org/psycopg/) [(repo)](https://github.com/psycopg/psycopg2/)
@@ -82,7 +82,7 @@ pg2kinesis is based on the ideas of others including:
 - wal2json [(repo)](https://github.com/eulerto/wal2json)
 
 
-## ~roadmap~
+## roadmap
 Future Road Map:
  - Package up for cheese shop
  - Allow payload format to be specified on Command Line.

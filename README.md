@@ -29,10 +29,11 @@ in *transaction commit time order* and with a guarantees that *no data will be l
 
 Currently we only support cloning or downloading a zip for installation.
 
-Perquisites:
+Prerequisites:
  1. Python 2.7
- 1. AWS-CLI install edand setup with botofile setup
- 1. <more detail for above>
+ 1. AWS-CLI installed and configured
+ 1. A postgres server with logical replication enabled
+ 1. A Kinesis stream
 
 Cloning install:
  1. `git clone git@github.com:handshake/pg2kinesis.git`
@@ -47,7 +48,7 @@ To run tests simply call `pytest` from installation directory.
 ## usage
 
  Run `python -m pg2kinesis --help` to get a list of the latest command line options. By default pg2kinesis attempts to 
- connect to a local postgres instance and publish to a stream named `pg2kinesis` using the AWS credentials of the
+ connect to a local postgres instance and publish to a stream named `pg2kinesis` using the AWS credentials in the
  environment the utility was invoked in.
   
  On successful start it will query your database for the primary key definitions of every table in `--pg-dbname`.

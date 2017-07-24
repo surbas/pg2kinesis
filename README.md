@@ -2,32 +2,28 @@
 
 [![Build Status](https://travis-ci.com/handshake/pg2kinesis.svg?token=NJkuMLD39WbGpvfKWtZT&branch=master)](https://travis-ci.com/handshake/pg2kinesis)
 
-pg2kinesis uses the[logical decoding](https://www.postgresql.org/docs/9.4/static/logicaldecoding.html) 
-feature of Postgres 9.4 or later to capture a consistent, continuous stream of events from the database
-and publishes them to [Amazon's Kinesis]() stream in a format of your choosing.
+pg2kinesis uses [logical decoding](https://www.postgresql.org/docs/9.4/static/logicaldecoding.html) 
+in Postgres 9.4 or later to capture a consistent, continuous stream of events from the database
+and publishes them to an [AWS Kinesis]() stream in a format of your choosing.
 
-It does this while not requiring any changes to your schema like triggers or "shadow" columns or tables,
-while having negligible impact on database performance.
-All this is done while being fault tolerant. It will not lose data on any type of underlying system failure i.e. process
-crashes, network blip, ec2 instance returns to the mother-ship in the sky... etc. However you may get into rare 
-edge-cases during these situations where this utility will double publish. 
-We felt it was better to get data twice (and program defensively knowing for this) than not at all.
+It does this without requiring any changes to your schema like triggers or "shadow" columns or tables,
+and has a negligible impact on database performance.
+This is done while being extremely fault tolerant. No data loss will be incurred on any type of underlying system
+failure including process crashes, network outages, or ec2 instance failures. However, in these situations there will likely
+be records that are sent more than once, so your consumer should be designed with this in mind.
  
 The fault tolerance comes from guarantees provided underlying technologies and from the "2-phase commit" style of 
-publishing inherent to the design of the program.
-When a change is received the utility receives acknowledgment from Kenisis that it was publish to the stream. 
-Only than do we advance the [xmin](https://www.postgresql.org/docs/9.4/static/catalog-pg-replication-slots.html) of 
-the slot, there by telling postgres it is safe to reclaim the space taken by the 
-wal logs.
+publishing inherent to the design of the program. Changes are first peeked from the replication slot and published to Kinesis.
+Once Kinesis successfully recieves a batch of records, we advance the [xmin](https://www.postgresql.org/docs/9.4/static/catalog-pg-replication-slots.html) of 
+the slot, thereby telling postgres it is safe to reclaim the space taken by the 
+wal logs. As is always the case with logical replication slots, unacknowledged data on the slot will consume disk on the database until it is read.
 
-There are other utilises that do very similar things. Most others have a C library 
-that is injected into Postgres to do the transforming the data in place. They than a separate client connect to the slot 
-and sling directly to message broker of choice. This is sadly verboten on AWS. 
-We specifically created pg2kinesis to allow the use of logical decoding on [Amazon's RDS for PostgreSQL.](https://aws.amazon.com/rds/postgresql/) 
+There are other utilities that do similar things, often by injecting a C library into Postgres to do data transformations in place. Unfortunately these approaches are not suitable for managed databases like AWS' RDS where support for various plugins is limited and ultimately determined by the hosting provider. 
+We specifically created pg2kinesis to make use of logical decoding on [Amazon's RDS for PostgreSQL](https://aws.amazon.com/rds/postgresql/). 
 Amazon only supports logical decoding if you use the built in [test_decoding](https://www.postgresql.org/docs/9.4/static/test-decoding.html)
 output plugin. What is special about our utility is it takes the output of the test_decoding plugin, transforms it based 
-on a formatter you can define guarantees publishing to Kinesis stream, 
-in *transaction commit time order* with a guarantees that *no data will be lost*.  
+on a formatter you can define, guarantees publishing to a Kinesis stream 
+in *transaction commit time order* and with a guarantees that *no data will be lost*.  
 
 ## installation
 
@@ -51,11 +47,11 @@ To run tests simply call `pytest` from installation directory.
 ## usage
 
  Run `python -m pg2kinesis --help` to get a list of the latest command line options. By default pg2kinesis attempts to 
- connect to a local postgres instance and publish to a stream named `pg2kinesis` on to whatever AWS account is currently
- the default in the environment the utility was invoked in.
+ connect to a local postgres instance and publish to a stream named `pg2kinesis` using the AWS credentials of the
+ environment the utility was invoked in.
   
- On successful start it will query your database for the primary keys definitions of every table in `--pg-dbname`.
- This is used to identify the correct column in the test_decoding output to publish. If a table does not have primary key 
+ On successful start it will query your database for the primary key definitions of every table in `--pg-dbname`.
+ This is used to identify the correct column in the test_decoding output to publish. If a table does not have a primary key 
  its changes will NOT be published.
  
  You have the choice for 2 different textual formats that will be sent to the kinesis stream:

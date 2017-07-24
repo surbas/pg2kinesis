@@ -1,5 +1,7 @@
 # pg2kinesis
 
+[![Build Status](https://travis-ci.com/handshake/pg2kinesis.svg?token=NJkuMLD39WbGpvfKWtZT&branch=master)](https://travis-ci.com/handshake/pg2kinesis)
+
 pg2kinesis uses the[logical decoding](https://www.postgresql.org/docs/9.4/static/logicaldecoding.html) 
 feature of Postgres 9.4 or later to capture a consistent, continuous stream of events from the database
 and publishes them to [Amazon's Kinesis]() stream in a format of your choosing.

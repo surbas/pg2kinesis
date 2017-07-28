@@ -1,3 +1,7 @@
 *.pyc
 .cache
 .idea/
+build/
+dist/
+pg2kinesis.egg-info/
+tests/__pycache__/

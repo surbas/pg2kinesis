@@ -8,7 +8,7 @@ pg2kinesis
 pg2kinesis uses `logical decoding
 <https://www.postgresql.org/docs/9.4/static/logicaldecoding.html>`_
 in Postgres 9.4 or later to capture a consistent, continuous stream of events from the database
-and publishes them to an [AWS Kinesis]() stream in a format of your choosing.
+and publishes them to an `AWS Kinesis <https://aws.amazon.com/kinesis/>`_ stream in a format of your choosing.
 
 It does this without requiring any changes to your schema like triggers or "shadow" columns or tables,
 and has a negligible impact on database performance.
@@ -41,22 +41,25 @@ Prerequisites:
  #. A PostgreSQL 9.4+ server with logical replication enabled
  #. A Kinesis stream
 
-Cloning install:
+Install:
 
- #. ``git clone git@github.com:handshake/pg2kinesis.git``
- #. ``cd pg2kinesis``
- #. ``pip install -r requirements.txt``
-
+ ``pip install pgkinesis``
 
 Tests
 -----
 
-To run tests simply call *pytest* from installation directory.
+To run tests you will need a clone of the repo and have to install some additional requirements:
+
+ #. ``git clone git@github.com:handshake/pg2kinesis.git``
+ #. ``cd pg2kinesis``
+ #. ``pip install -r requirements.txt``
+ #. ``pytest``
+
 
 Usage
 -----
 
-Run ``python -m pg2kinesis --help`` to get a list of the latest command line options. By default pg2kinesis attempts to connect to a local postgres instance and publish to a stream named ``pg2kinesis`` using the AWS credentials in the environment the utility was invoked in.
+Run ``pg2k --help`` to get a list of the latest command line options. By default pg2kinesis attempts to connect to a local postgres instance and publish to a stream named ``pg2kinesis`` using the AWS credentials in the environment the utility was invoked in.
 
 On successful start it will query your database for the primary key definitions of every table in ``--pg-dbname``. This is used to identify the correct column in the test_decoding output to publish. If a table does not have a primary key its changes will **NOT** be published.
 
@@ -67,7 +70,7 @@ You have the choice for 2 different textual formats that will be sent to the kin
     0,CDC,<transaction_id (xid)>,<table name>,<dml operation:DELETE|INSERT|UPDATE>,<primary key of row>
 
 * ``CSVPayloadFormatter``: outputs similar to the above except the 3rd column is now a json object representing the change.::
- 
+
     0,CDC,{
             "xid": <transaction_id>
             "table": <...>

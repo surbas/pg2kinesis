@@ -68,10 +68,7 @@ def find_meta(meta):
 
 VERSION = find_meta('version')
 URI = find_meta('uri')
-LONG = (
-    read('README.rst')
-)
-
+LONG = read('README.rst')
 
 if __name__ == "__main__":
     setup(

@@ -85,9 +85,9 @@ pg2kinesis is based on the ideas of others including:
 
 * Logical Decoding: a new world of data exchange applications for Postgres SQL [(`slides <https://www.slideshare.net/8kdata/postgresql-logical-decoding/>`_)]
 * psycopg2 [(`main <http://initd.org/psycopg/>`_]) [(`repo
-  <https://github.com/psycopg/psycopg2/>`_)]
-* bottledwater-pg [(`blog <https://www.confluent.io/blog/bottled-water-real-time-integration-of-postgresql-and-kafka>`_)] [(`repo <https://github.com/confluentinc/bottledwater-pg/>`_)]
-* wal2json [(`repo <https://github.com/eulerto/wal2json/>`_)]
+  <https://github.com/psycopg/psycopg2/>`__)]
+* bottledwater-pg [(`blog <https://www.confluent.io/blog/bottled-water-real-time-integration-of-postgresql-and-kafka>`_)] [(`repo <https://github.com/confluentinc/bottledwater-pg/>`__)]
+* wal2json [(`repo <https://github.com/eulerto/wal2json/>`__)]
 
 
 Future Road Map
@@ -98,4 +98,3 @@ Future Road Map
 * Support above on a schedule specified via commandline with sensible default of once an hour.
 * Full Row information publishing (currently we only emit the DML, primary key and table on any type of change)
 * Python 3 Support
-

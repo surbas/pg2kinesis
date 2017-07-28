@@ -21,7 +21,6 @@ from .log import logger
 @click.option('--create-slot', default=False, is_flag=True, help='Attempt to on start create a the slot.')
 @click.option('--recreate-slot', default=False, is_flag=True,
               help='Deletes the slot on start if it exists and then creates.')
-
 def main(pg_dbname, pg_host, pg_port, pg_user, pg_slot_name, stream_name,
          message_formatter, table_pat, full_change, create_slot, recreate_slot):
     logger.info('Starting pg2kinesis')

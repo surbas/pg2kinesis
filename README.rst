@@ -16,7 +16,7 @@ This is done while being extremely fault tolerant. No data loss will be incurred
 failure including process crashes, network outages, or ec2 instance failures. However, in these situations there will likely
 be records that are sent more than once, so your consumer should be designed with this in mind.
 
-The fault tolerance comes from guarantees provided underlying technologies and from the "2-phase commit" style of
+The fault tolerance comes from guarantees provided by the underlying technologies and from the "2-phase commit" style of
 publishing inherent to the design of the program. Changes are first peeked from the replication slot and published to Kinesis.
 Once Kinesis successfully recieves a batch of records, we advance the `xmin <https://www.postgresql.org/docs/9.4/static/catalog-pg-replication-slots.html>`_ of
 the slot, thereby telling postgres it is safe to reclaim the space taken by the
@@ -32,18 +32,16 @@ in *transaction commit time order* and with a guarantees that *no data will be l
 Installation
 ------------
 
-Currently we only support cloning or downloading a zip for installation.
-
 Prerequisites:
 
- #. Python 2.7
+ #. Python 2.7.*
  #. AWS-CLI installed and configured
  #. A PostgreSQL 9.4+ server with logical replication enabled
  #. A Kinesis stream
 
 Install:
 
- ``pip install pgkinesis``
+ ``pip install pg2kinesis``
 
 Tests
 -----
@@ -59,7 +57,9 @@ To run tests you will need a clone of the repo and have to install some addition
 Usage
 -----
 
-Run ``pg2k --help`` to get a list of the latest command line options. By default pg2kinesis attempts to connect to a local postgres instance and publish to a stream named ``pg2kinesis`` using the AWS credentials in the environment the utility was invoked in.
+Run ``pg2k --help`` to get a list of the latest command line options.
+
+By default pg2kinesis attempts to connect to a local postgres instance and publish to a stream named ``pg2kinesis`` using the AWS credentials in the environment the utility was invoked in.
 
 On successful start it will query your database for the primary key definitions of every table in ``--pg-dbname``. This is used to identify the correct column in the test_decoding output to publish. If a table does not have a primary key its changes will **NOT** be published.
 

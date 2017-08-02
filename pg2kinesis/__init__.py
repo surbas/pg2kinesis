@@ -9,4 +9,4 @@ __author__ = 'Shon T. Urbas, Geoff Johnson'
 __email__ = 'shon.urbas@gmail.com, geoff.johnson@handshake.com'
 
 __license__ = 'MIT'
-__copyright__ = 'Copyright (c) 2017 Handshake Corp.'
+__copyright__ = 'Copyright (c) 2016 Handshake Corp.'

@@ -57,7 +57,7 @@ To run tests you will need a clone of the repo and have to install some addition
 Usage
 -----
 
-Run ``pg2k --help`` to get a list of the latest command line options.
+Run ``pg2kinesis --help`` to get a list of the latest command line options.
 
 By default pg2kinesis attempts to connect to a local postgres instance and publish to a stream named ``pg2kinesis`` using the AWS credentials in the environment the utility was invoked in.
 

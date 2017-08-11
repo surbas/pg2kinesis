@@ -88,6 +88,6 @@ if __name__ == "__main__":
         classifiers=CLASSIFIERS,
         install_requires=INSTALL_REQUIRES,
         entry_points={
-            'console_scripts': ['pg2k=pg2kinesis.__main__:main'],
+            'console_scripts': ['pg2kinesis=pg2kinesis.__main__:main'],
         }
     )

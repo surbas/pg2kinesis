@@ -14,6 +14,8 @@ from .log import logger
 @click.option('--pg-port', '-p', default='5432', help='Postgres port.')
 @click.option('--pg-user', '-u', help='Postgres user')
 @click.option('--pg-slot-name', '-s', default='pg2kinesis', help='Postgres replication slot name.')
+@click.option('--pg-slot-output-plugin', default='test_decoding',
+              help='Postgres replication slot output plugin')
 @click.option('--stream-name', '-k', default='pg2kinesis', help='Kinesis stream name.')
 @click.option('--message-formatter', '-f', default='CSVPayload', help='Kinesis record formatter.')
 @click.option('--table-pat', help='Optional regular expression for table names.')
@@ -21,8 +23,9 @@ from .log import logger
 @click.option('--create-slot', default=False, is_flag=True, help='Attempt to on start create a the slot.')
 @click.option('--recreate-slot', default=False, is_flag=True,
               help='Deletes the slot on start if it exists and then creates.')
-def main(pg_dbname, pg_host, pg_port, pg_user, pg_slot_name, stream_name,
-         message_formatter, table_pat, full_change, create_slot, recreate_slot):
+def main(pg_dbname, pg_host, pg_port, pg_user, pg_slot_name,
+         pg_slot_output_plugin, stream_name, message_formatter, table_pat,
+         full_change, create_slot, recreate_slot):
     logger.info('Starting pg2kinesis')
 
     if full_change:
@@ -31,7 +34,7 @@ def main(pg_dbname, pg_host, pg_port, pg_user, pg_slot_name, stream_name,
     logger.info('Getting kinesis stream writer')
     writer = StreamWriter(stream_name)
 
-    with SlotReader(pg_dbname, pg_host, pg_port, pg_user, pg_slot_name) as reader:
+    with SlotReader(pg_dbname, pg_host, pg_port, pg_user, pg_slot_name, pg_slot_output_plugin) as reader:
 
         if recreate_slot:
             reader.delete_slot()

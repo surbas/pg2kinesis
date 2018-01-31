@@ -30,7 +30,8 @@ class SlotReader(object):
                  ) as q using (table_catalog, table_schema, table_name)
                  ORDER BY ordinal_position;"""
 
-    def __init__(self, database, host, port, user, slot_name, keepalive_window=30):
+    def __init__(self, database, host, port, user, slot_name,
+                 output_plugin='test_decoding', keepalive_window=30):
         # Cool fact: using connections as context manager doesn't close them on success after leaving with block
         self._db_confg = dict(database=database, host=host, port=port, user=user)
         self._keepalive_window = keepalive_window
@@ -38,6 +39,8 @@ class SlotReader(object):
         self._repl_cursor = None
         self._normal_conn = None
         self.slot_name = slot_name
+        self.output_plugin = output_plugin
+
         self.cur_lag = 0
 
     def __enter__(self):
@@ -120,7 +123,7 @@ class SlotReader(object):
         try:
             self._repl_cursor.create_replication_slot(self.slot_name,
                                                       slot_type=psycopg2.extras.REPLICATION_LOGICAL,
-                                                      output_plugin='test_decoding')
+                                                      output_plugin=self.output_plugin)
         except psycopg2.ProgrammingError as p:
             # Will be raised if slot exists already.
             if p.pgcode != psycopg2.errorcodes.DUPLICATE_OBJECT:

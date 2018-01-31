@@ -146,5 +146,9 @@ class SlotReader(object):
 
     def process_replication_stream(self, consume):
         logger.info('Starting the consumption of slot "%s"!' % self.slot_name)
-        self._repl_cursor.start_replication(self.slot_name)
+        if self.output_plugin == 'wal2json':
+            options = {'include-xids': 1}
+        else:
+            options = None
+        self._repl_cursor.start_replication(self.slot_name, options=options)
         self._repl_cursor.consume_stream(consume)

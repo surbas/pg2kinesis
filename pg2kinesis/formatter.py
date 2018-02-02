@@ -8,9 +8,10 @@ from collections import namedtuple
 
 # Tuples representing changes as pulled from database
 Change = namedtuple('Change', 'xid, table, operation, pkey')
+BulkChange = namedtuple('BulkChange', 'xid, changes')
 
 # Final product of Formatter, a Change and the Change formatted.
-Message = namedtuple('Message', 'change, fmt_msg')
+Message = namedtuple('Message', 'change, fmt_msg, is_bulk')
 
 COL_TYPE_VALUE_TEMPLATE_PAT = ur"{col_name}\[{col_type}\]:'?([\w\-]+)'?"
 
@@ -30,6 +31,9 @@ class Formatter(object):
             self._primary_key_patterns[k + ":"] = re.compile(
                 COL_TYPE_VALUE_TEMPLATE_PAT.format(col_name=v.col_name, col_type=v.col_type)
             )
+
+    def _preprocess_full_change(self, change):
+        raise NotImplementedError
 
     def _preprocess_change(self, change):
         """
@@ -73,7 +77,10 @@ class Formatter(object):
         raise Exception(msg)
 
     def __call__(self, change):
-        pp_change = self._preprocess_change(change)
+        if self.full_change:
+            pp_change = self._preprocess_full_change(change)
+        else:
+            pp_change = self._preprocess_change(change)
         if pp_change:
             return self.produce_formatted_message(pp_change)
 
@@ -83,15 +90,137 @@ class Formatter(object):
 
 class CSVFormatter(Formatter):
     def produce_formatted_message(self, change):
-        msg = Message(change=change, fmt_msg='{},{},{},{},{},{}'.format(CSVFormatter.VERSION,
-                                                                         CSVFormatter.TYPE, *change))
+        msg = Message(
+            change=change,
+            fmt_msg='{},{},{},{},{},{}'.format(CSVFormatter.VERSION, CSVFormatter.TYPE, *change),
+            is_bulk=False,
+        )
         return msg
 
 
 class CSVPayloadFormatter(Formatter):
     def produce_formatted_message(self, change):
-        msg = Message(change=change, fmt_msg='{},{},{}'.format(CSVFormatter.VERSION,
-                                                                CSVFormatter.TYPE, json.dumps(change.__dict__)))
+        msg = Message(
+            change=change,
+            fmt_msg='{},{},{}'.format(CSVFormatter.VERSION, CSVFormatter.TYPE, json.dumps(change.__dict__)),
+            is_bulk=False,
+        )
+        return msg
+
+
+class JSONPayloadFormatter(Formatter):
+    def __init__(self, primary_key_map, full_change=False, table_pat=None):
+        super(JSONPayloadFormatter, self).__init__(primary_key_map, full_change, table_pat)
+
+        self.primary_key_map = primary_key_map
+
+    def _preprocess_full_change(self, change):
+        """
+        Takes a message payload, extracts the xid, and returns the payload
+
+        They look like this:
+            {
+                "xid": 1234567890
+                "change": [
+                    {
+                        "kind": "insert",
+                        "schema": "public",
+                        "table": "some_table",
+                        "columnnames": ["id", "stuff", "a_date"],
+                        "columntypes": ["int4", "varchar", "timestamptz"],
+                        "columnvalues": [
+                            42,
+                            "hello, world",
+                            "2018-01-31 16:46:12.824347+00",
+                        ]
+                    }
+                ]
+            }
+        :param change: a message payload from postgres wal2json plugin.
+        :return: A namedtuple of type BulkChange
+        """
+
+        change_dictionary = json.loads(change)
+
+        if not change_dictionary:
+            return None
+
+        self.cur_xact = change_dictionary.get('xid')
+
+        changes = [
+            json.dumps(change)
+            for change in change_dictionary.get('change')
+        ]
+
+        return BulkChange(xid=self.cur_xact, changes=changes)
+
+    def _preprocess_change(self, change):
+        """
+        Takes a message payload and distills it into a list of Change tuples currently only looking for primary key.
+
+        They look like this:
+            {
+                "xid": 1234567890
+                "change": [
+                    {
+                        "kind": "insert",
+                        "schema": "public",
+                        "table": "some_table",
+                        "columnnames": ["id", "stuff", "a_date"],
+                        "columntypes": ["int4", "varchar", "timestamptz"],
+                        "columnvalues": [
+                            42,
+                            "hello, world",
+                            "2018-01-31 16:46:12.824347+00",
+                        ]
+                    }
+                ]
+            }
+        :param change: a message payload from postgres wal2json plugin.
+        :return: A namedtuple of type BulkChange
+        """
+        change_dictionary = json.loads(change)
+
+        if not change_dictionary:
+            return None
+
+        self.cur_xact = change_dictionary.get('xid')
+
+        changes = []
+        for individual_change in change_dictionary.get('change'):
+            table_name = individual_change.get('table')
+            schema = individual_change.get('schema')
+
+            if self.table_re.search(table_name):
+                try:
+                    primary_key = self.primary_key_map['{}.{}'.format(schema, table_name)]
+                except KeyError:
+                    self._log_and_raise('Unable to locate table: "{}.{}"'.format(schema, table_name))
+                else:
+                    if primary_key:
+                        value_index = individual_change.get('columnnames').index(primary_key.col_name)
+                        pkey = '{}[{}]:{}'.format(primary_key.col_name,
+                                                  primary_key.col_type,
+                                                  individual_change.get('columnvalues')[value_index])
+                        changes.append('xid:{} table:{} operation:{} pkey:{}'.format(
+                            self.cur_xact,
+                            table_name,
+                            individual_change.get('kind'),
+                            pkey,
+                        ))
+                    else:
+                        # TODO: make this an error or warning.
+                        # self._log_and_raise('Unable to locate primary key for table "{}"'.format(table_name))
+                        pass
+
+        return BulkChange(xid=self.cur_xact, changes=changes)
+
+    def produce_formatted_message(self, change):
+        msg = Message(
+            change=change,
+            fmt_msg='{},{},'.format(JSONPayloadFormatter.VERSION, JSONPayloadFormatter.TYPE),
+            is_bulk=True,
+        )
         return msg
 
 

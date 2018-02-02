@@ -9,7 +9,7 @@ from pg2kinesis.slot import SlotReader
 
 @pytest.fixture
 def slot():
-    slot = SlotReader('blah_db', 'blah_host', 'blah_port', 'blah_user', 'pg2kinesis', keepalive_window=0)
+    slot = SlotReader('blah_db', 'blah_host', 'blah_port', 'blah_user', 'pg2kinesis','test_decoding', keepalive_window=0)
     slot._repl_cursor = Mock()
     slot._repl_conn = Mock()
     slot._normal_conn = Mock()
@@ -206,6 +206,6 @@ def test_process_replication_stream(slot):
     consume = Mock()
     slot.process_replication_stream(consume)
 
-    assert call.start_replication('pg2kinesis') in  slot._repl_cursor.method_calls, 'We started replication event loop'
+    assert call.start_replication('pg2kinesis', options=None) in  slot._repl_cursor.method_calls, 'We started replication event loop'
     assert call.consume_stream(consume) in slot._repl_cursor.method_calls, 'We pass consume to this method'
 

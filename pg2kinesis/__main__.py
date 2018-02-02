@@ -29,7 +29,12 @@ def main(pg_dbname, pg_host, pg_port, pg_user, pg_slot_name,
     logger.info('Starting pg2kinesis')
 
     if full_change:
-        raise NotImplementedError
+        full_change_error_message = (
+            'Full Change is currently only supported with the "wal2json"'
+            ' pg-slot-output-plugin and the "JSONPayload" message-formatter'
+        )
+        assert pg_slot_output_plugin == 'wal2json' and message_formatter == 'JSONPayload', full_change_error_message
+
 
     logger.info('Getting kinesis stream writer')
     writer = StreamWriter(stream_name)

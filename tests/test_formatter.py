@@ -6,8 +6,15 @@ import mock
 import pytest
 
 from pg2kinesis.slot import PrimaryKeyMapItem
-from pg2kinesis.formatter import Change, CSVFormatter, CSVPayloadFormatter, Formatter, get_formatter
-
+from pg2kinesis.formatter import (
+    Change,
+    BulkChange,
+    CSVFormatter,
+    CSVPayloadFormatter,
+    JSONPayloadFormatter,
+    Formatter,
+    get_formatter,
+)
 
 def get_formatter_produce_formatted_message(cls):
     # type: (Formatter, unicode) -> Message
@@ -19,16 +26,23 @@ def get_formatter_produce_formatted_message(cls):
 
 def test_CSVFormatter_produce_formatted_message():
     result = get_formatter_produce_formatted_message(CSVFormatter)
-
     assert result.fmt_msg == u'0,CDC,1,public.blue,Update,123456'
+    assert result.is_bulk == False
 
 
 def test_CSVPayloadFormatter_produce_formatted_message():
     result = get_formatter_produce_formatted_message(CSVPayloadFormatter)
     assert result.fmt_msg.startswith(u'0,CDC,')
+    assert result.is_bulk == False
     payload = result.fmt_msg.split(',', 2)[-1]
     assert json.loads(payload) == dict(xid=1, table=u'public.blue', operation=u'Update', pkey=u'123456')
 
+def test_JSONPayloadFormatter_produce_bulk_message():
+    change = BulkChange(xid=1, changes=['1,public.blue,Update,123456'])
+    result = JSONPayloadFormatter({}).produce_formatted_message(change)
+    assert result.fmt_msg.startswith(u'0,CDC,')
+    assert result.change == change
+    assert result.is_bulk == True
 
 @pytest.fixture
 def pkey_map():

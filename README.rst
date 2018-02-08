@@ -120,7 +120,7 @@ pg2kinesis is based on the ideas of others including:
 Future Road Map
 ---------------
 
-* Allow payload format to be specified on Command Line.
+* Support all combinations of decoding plugins & message formatters
 * Allow HUPing to notify utility to regenerate primary key cache
 * Support above on a schedule specified via commandline with sensible default of once an hour.
 * Python 3 Support

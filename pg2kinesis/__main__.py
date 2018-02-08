@@ -35,6 +35,9 @@ def main(pg_dbname, pg_host, pg_port, pg_user, pg_slot_name,
         )
         assert pg_slot_output_plugin == 'wal2json' and message_formatter == 'JSONPayload', full_change_error_message
 
+    if message_formatter == 'JSONPayload':
+        assert pg_slot_output_plugin == 'wal2json', 'JSONPayload is currently only supported with the "wal2json"'
+
 
     logger.info('Getting kinesis stream writer')
     writer = StreamWriter(stream_name)

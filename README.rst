@@ -78,7 +78,33 @@ You have the choice for 3 different textual formats that will be sent to the kin
             "pkey": <...>
           }
 
-* ``JSONPayloadFormatter``: outputs
+* ``JSONPayloadFormatter``: handles changes decoded by the wal2json plugin and outputs either the primary key of the change or the full changed row.::
+
+    0,CDC,{
+            "xid": <transaction_id>,
+            "change": {
+              "kind":  <...>,
+              "columntype":  <...>,
+              "columnvalue":  <...>,
+              "columnname":  <...>,
+              "table":  <...>,
+              "schema":  <...>
+            }
+          }
+
+    0,CDC,{
+            "xid": <transaction_id>,
+            "change": {
+              "kind": <...>,
+              "table": <...>,
+              "schema": <...>,
+              "columnnames": [<...>],
+              "columntypes": [<...>],
+              "columnvalues": [<...>],
+            }
+          }
+
+
 Shout Outs
 ----------
 

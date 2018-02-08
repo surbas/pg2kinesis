@@ -147,12 +147,7 @@ class JSONPayloadFormatter(Formatter):
 
         self.cur_xact = change_dictionary.get('xid')
 
-        changes = [
-            json.dumps(change)
-            for change in change_dictionary.get('change')
-        ]
-
-        return BulkChange(xid=self.cur_xact, changes=changes)
+        return BulkChange(xid=self.cur_xact, changes=change_dictionary.get('change'))
 
     def _preprocess_change(self, change):
         """
@@ -194,14 +189,14 @@ class JSONPayloadFormatter(Formatter):
                 else:
                     if primary_key:
                         value_index = individual_change.get('columnnames').index(primary_key.col_name)
-                        changes.append(json.dumps({
+                        changes.append({
                             'kind': individual_change.get('kind'),
                             'schema': individual_change.get('schema'),
                             'table': individual_change.get('table'),
                             'columnname': primary_key.col_name,
                             'columntype': primary_key.col_type,
                             'columnvalue': individual_change.get('columnvalues')[value_index],
-                        }))
+                        })
                     else:
                         # TODO: make this an error or warning.
                         # self._log_and_raise('Unable to locate primary key for table "{}"'.format(table_name))

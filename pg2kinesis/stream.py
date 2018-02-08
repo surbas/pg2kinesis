@@ -39,8 +39,9 @@ class StreamWriter(object):
                     agg_record = self._check_full_agg_record(agg_record)
             else:
                 agg_record = self._record_agg.add_user_record(fmt_msg.change.xid, fmt_msg.fmt_msg)
-
-        agg_record = self._check_full_agg_record(agg_record)
+                agg_record = self._check_full_agg_record(agg_record)
+        else:
+           agg_record = self._check_full_agg_record(agg_record)
 
         return agg_record
 

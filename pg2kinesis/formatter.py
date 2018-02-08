@@ -166,13 +166,9 @@ class JSONPayloadFormatter(Formatter):
                         "kind": "insert",
                         "schema": "public",
                         "table": "some_table",
-                        "columnnames": ["id", "stuff", "a_date"],
-                        "columntypes": ["int4", "varchar", "timestamptz"],
-                        "columnvalues": [
-                            42,
-                            "hello, world",
-                            "2018-01-31 16:46:12.824347+00",
-                        ]
+                        "columnname": "id",
+                        "columntype": "int4",
+                        "columnvalue": 42
                     }
                 ]
             }
@@ -190,7 +186,6 @@ class JSONPayloadFormatter(Formatter):
         for individual_change in change_dictionary.get('change'):
             table_name = individual_change.get('table')
             schema = individual_change.get('schema')
-
             if self.table_re.search(table_name):
                 try:
                     primary_key = self.primary_key_map['{}.{}'.format(schema, table_name)]
@@ -199,19 +194,18 @@ class JSONPayloadFormatter(Formatter):
                 else:
                     if primary_key:
                         value_index = individual_change.get('columnnames').index(primary_key.col_name)
-                        pkey = '{}[{}]:{}'.format(primary_key.col_name,
-                                                  primary_key.col_type,
-                                                  individual_change.get('columnvalues')[value_index])
-                        changes.append('xid:{} table:{} operation:{} pkey:{}'.format(
-                            self.cur_xact,
-                            table_name,
-                            individual_change.get('kind'),
-                            pkey,
-                        ))
+                        changes.append(json.dumps({
+                            'kind': individual_change.get('kind'),
+                            'schema': individual_change.get('schema'),
+                            'table': individual_change.get('table'),
+                            'columnname': primary_key.col_name,
+                            'columntype': primary_key.col_type,
+                            'columnvalue': individual_change.get('columnvalues')[value_index],
+                        }))
                     else:
                         # TODO: make this an error or warning.
                         # self._log_and_raise('Unable to locate primary key for table "{}"'.format(table_name))
-                        pass
+                        passs
 
         return BulkChange(xid=self.cur_xact, changes=changes)
 

@@ -7,6 +7,8 @@ import boto3
 from botocore.exceptions import ClientError
 
 from pg2kinesis.stream import StreamWriter
+from pg2kinesis.formatter import JSONPayloadFormatter
+
 
 @pytest.fixture()
 def writer():
@@ -41,6 +43,7 @@ def test_put_message(writer):
     msg = Mock()
     msg.change.xid = 10
     msg.fmt_msg = object()
+    msg.is_bulk = False
 
     writer.last_send = 1445444940.0 - 10      # "2015-10-21 16:28:50"
     with freeze_time('2015-10-21 16:29:00'):  # -> 1445444940.0
@@ -68,6 +71,47 @@ def test_put_message(writer):
         assert result == 'blue', 'We passed in a message that forced the agg to report full'
         assert writer._send_agg_record.called, 'We sent a record'
         assert writer.last_send == 1445444960.0, 'updated window'
+
+def test_put_bulk_message(writer):
+
+    writer._send_agg_record = Mock()
+
+    msg = Mock()
+    msg.change.xid = 10
+    msg.change.changes = ['blue']
+    msg.fmt_msg = '{},{},'.format(JSONPayloadFormatter.VERSION, JSONPayloadFormatter.TYPE)
+    msg.is_bulk = True
+
+    writer.last_send = 1445444940.0 - 10      # "2015-10-21 16:28:50"
+    with freeze_time('2015-10-21 16:29:00'):  # -> 1445444940.0
+        result = writer.put_message(None)
+
+        assert result is None, 'With no message or timeout we did not force a send'
+        assert not writer._send_agg_record.called, 'we did not force a send'
+
+        writer._record_agg.add_user_record = Mock(return_value=None)
+        result = writer.put_message(msg)
+        assert result is None, 'With message, no timeout and not a full agg we do not send'
+        assert not writer._send_agg_record.called, 'we did not force a send'
+
+    print writer._send_agg_record.call_args_list
+
+    with freeze_time('2015-10-21 16:29:10'):  # -> 1445444950.0
+        result = writer.put_message(msg)
+        assert result is not None, 'Timeout forced a send'
+        assert writer._send_agg_record.called, 'We sent a record'
+        assert writer.last_send == 1445444950.0, 'updated window'
+
+    print writer._send_agg_record.call_args_list
+
+    with freeze_time('2015-10-21 16:29:20'):  # -> 1445444960.0
+        writer._record_agg.add_user_record = Mock(return_value='blue')
+        result = writer.put_message(msg)
+        assert result == 'blue', 'We passed in a message that forced the agg to report full'
+        assert writer._send_agg_record.called, 'We sent a record'
+        assert writer.last_send == 1445444960.0, 'updated window'
+
+    assert len(writer._send_agg_record.call_args_list) == 2, 'We sent exactly 2 records'
 
 
 def test__send_agg_record(writer):

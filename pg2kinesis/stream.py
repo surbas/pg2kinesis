@@ -1,6 +1,7 @@
-import time
 import aws_kinesis_agg.aggregator
 import boto3
+import json
+import time
 
 from botocore.exceptions import ClientError
 from .log import logger
@@ -33,8 +34,22 @@ class StreamWriter(object):
         agg_record = None
 
         if fmt_msg:
-            agg_record = self._record_agg.add_user_record(fmt_msg.change.xid, fmt_msg.fmt_msg)
+            if fmt_msg.is_bulk:
+                for change in fmt_msg.change.changes:
+                    agg_record = self._record_agg.add_user_record(fmt_msg.change.xid, fmt_msg.fmt_msg + json.dumps({
+                        'xid': fmt_msg.change.xid,
+                        'change': change,
+                    }))
+                    agg_record = self._check_full_agg_record(agg_record)
+            else:
+                agg_record = self._record_agg.add_user_record(fmt_msg.change.xid, fmt_msg.fmt_msg)
+                agg_record = self._check_full_agg_record(agg_record)
+        else:
+           agg_record = self._check_full_agg_record(agg_record)
 
+        return agg_record
+
+    def _check_full_agg_record(self, agg_record):
         # agg_record will be a complete record if aggregation is full.
         if agg_record or (self._send_window and time.time() - self.last_send > self._send_window):
             agg_record = agg_record if agg_record else self._record_agg.clear_and_get()

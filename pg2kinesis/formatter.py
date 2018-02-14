@@ -90,9 +90,9 @@ class Formatter(object):
                         "kind": "insert",
                         "schema": "public",
                         "table": "some_table",
-                        "columnname": "id",
-                        "columntype": "int4",
-                        "columnvalue": 42
+                        "columnnames": ["id"],
+                        "columntypes": ["int4"],
+                        "columnvalues": [42]
                     }
                 ]
             }
@@ -120,15 +120,12 @@ class Formatter(object):
                     except KeyError:
                         self._log_and_raise(MISSING_TABLE_ERR.format(full_table))
                     else:
-                        if primary_key:
-                            value_index = change.get('columnnames').index(primary_key.col_name)
-                            pkey = str(change.get('columnvalues')[value_index])
-                            changes.append(Change(xid=self.cur_xact,
-                                                  table=full_table,
-                                                  operation=change.get('kind').lower(),
-                                                  pkey=pkey))
-                        else:
-                            self._log_and_raise(MISSING_PK_ERR.format(table_name))
+                        value_index = change.get('columnnames').index(primary_key.col_name)
+                        pkey = str(change.get('columnvalues')[value_index])
+                        changes.append(Change(xid=self.cur_xact,
+                                              table=full_table,
+                                              operation=change.get('kind').lower(),
+                                              pkey=pkey))
         return changes
 
     @staticmethod

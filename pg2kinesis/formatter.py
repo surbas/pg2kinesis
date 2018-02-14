@@ -104,12 +104,12 @@ class Formatter(object):
         if not change_dictionary:
             return None
 
-        self.cur_xact = change_dictionary.get('xid')
+        self.cur_xact = change_dictionary['xid']
         changes = []
 
-        for change in change_dictionary.get('change'):
-            table_name = change.get('table')
-            schema = change.get('schema')
+        for change in change_dictionary['change']:
+            table_name = change['table']
+            schema = change['schema']
             if self.table_re.search(table_name):
                 if self.full_change:
                     changes.append(FullChange(xid=self.cur_xact, change=change))
@@ -120,11 +120,11 @@ class Formatter(object):
                     except KeyError:
                         self._log_and_raise(MISSING_TABLE_ERR.format(full_table))
                     else:
-                        value_index = change.get('columnnames').index(primary_key.col_name)
-                        pkey = str(change.get('columnvalues')[value_index])
+                        value_index = change['columnnames'].index(primary_key.col_name)
+                        pkey = str(change['columnvalues'][value_index])
                         changes.append(Change(xid=self.cur_xact,
                                               table=full_table,
-                                              operation=change.get('kind').lower(),
+                                              operation=change['kind'].lower(),
                                               pkey=pkey))
         return changes
 

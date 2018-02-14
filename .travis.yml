@@ -1,6 +1,11 @@
 dist: trusty
 language: python
 
+branches:
+  only:
+    - master
+
+
 sudo: false
 
 python:

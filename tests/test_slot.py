@@ -206,6 +206,6 @@ def test_process_replication_stream(slot):
     consume = Mock()
     slot.process_replication_stream(consume)
 
-    assert call.start_replication('pg2kinesis') in  slot._repl_cursor.method_calls, 'We started replication event loop'
+    assert call.start_replication('pg2kinesis', options=None) in  slot._repl_cursor.method_calls, 'We started replication event loop'
     assert call.consume_stream(consume) in slot._repl_cursor.method_calls, 'We pass consume to this method'
 

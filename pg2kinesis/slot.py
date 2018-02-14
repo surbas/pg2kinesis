@@ -15,29 +15,34 @@ PrimaryKeyMapItem = namedtuple('PrimaryKeyMapItem', 'table_name, col_name, col_t
 
 
 class SlotReader(object):
-    PK_SQL = """SELECT CONCAT(table_schema, '.', table_name), column_name, data_type, ordinal_position
-                 FROM information_schema.tables
-                 LEFT JOIN (
-                     SELECT CONCAT(table_schema, '.', table_name), column_name, data_type, c.ordinal_position,
-                                 table_catalog, table_schema, table_name
-                     FROM information_schema.table_constraints
-                     JOIN information_schema.key_column_usage AS kcu
-                         USING (constraint_catalog, constraint_schema, constraint_name,
-                                     table_catalog, table_schema, table_name)
-                     JOIN information_schema.columns AS c
-                         USING (table_catalog, table_schema, table_name, column_name)
-                     WHERE constraint_type = 'PRIMARY KEY'
-                 ) as q using (table_catalog, table_schema, table_name)
-                 ORDER BY ordinal_position;"""
+    PK_SQL = """
+    SELECT CONCAT(table_schema, '.', table_name), column_name, data_type, ordinal_position
+    FROM information_schema.tables
+    LEFT JOIN (
+        SELECT CONCAT(table_schema, '.', table_name), column_name, data_type, c.ordinal_position,
+                    table_catalog, table_schema, table_name
+        FROM information_schema.table_constraints
+        JOIN information_schema.key_column_usage AS kcu
+            USING (constraint_catalog, constraint_schema, constraint_name,
+                        table_catalog, table_schema, table_name)
+        JOIN information_schema.columns AS c
+            USING (table_catalog, table_schema, table_name, column_name)
+        WHERE constraint_type = 'PRIMARY KEY'
+    ) as q using (table_catalog, table_schema, table_name)
+    ORDER BY ordinal_position;
+    """
 
-    def __init__(self, database, host, port, user, slot_name, keepalive_window=30):
-        # Cool fact: using connections as context manager doesn't close them on success after leaving with block
+    def __init__(self, database, host, port, user, slot_name,
+                 output_plugin='test_decoding', keepalive_window=30):
+        # Cool fact: using connections as context manager doesn't close them on
+        # success after leaving with block
         self._db_confg = dict(database=database, host=host, port=port, user=user)
         self._keepalive_window = keepalive_window
         self._repl_conn = None
         self._repl_cursor = None
         self._normal_conn = None
         self.slot_name = slot_name
+        self.output_plugin = output_plugin
         self.cur_lag = 0
 
     def __enter__(self):
@@ -95,10 +100,10 @@ class SlotReader(object):
         return t
 
     def _get_connection(self, connection_factory=None, cursor_factory=None):
-        return psycopg2.connect(connection_factory=connection_factory, cursor_factory=cursor_factory, **self._db_confg)
+        return psycopg2.connect(connection_factory=connection_factory,
+                                cursor_factory=cursor_factory, **self._db_confg)
 
     def _execute_and_fetch(self, sql, *params):
-
         with self._normal_conn.cursor() as cur:
             if params:
                 cur.execute(sql, params)
@@ -120,7 +125,7 @@ class SlotReader(object):
         try:
             self._repl_cursor.create_replication_slot(self.slot_name,
                                                       slot_type=psycopg2.extras.REPLICATION_LOGICAL,
-                                                      output_plugin='test_decoding')
+                                                      output_plugin=self.output_plugin)
         except psycopg2.ProgrammingError as p:
             # Will be raised if slot exists already.
             if p.pgcode != psycopg2.errorcodes.DUPLICATE_OBJECT:
@@ -143,5 +148,9 @@ class SlotReader(object):
 
     def process_replication_stream(self, consume):
         logger.info('Starting the consumption of slot "%s"!' % self.slot_name)
-        self._repl_cursor.start_replication(self.slot_name)
+        if self.output_plugin == 'wal2json':
+            options = {'include-xids': 1}
+        else:
+            options = None
+        self._repl_cursor.start_replication(self.slot_name, options=options)
         self._repl_cursor.consume_stream(consume)

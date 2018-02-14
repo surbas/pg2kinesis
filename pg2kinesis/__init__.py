@@ -1,4 +1,4 @@
-__version__ = '0.5.0'
+__version__ = '0.6.0'
 
 __uri__ = 'https://github.com/handshake/pg2kinesis'
 __title__ = 'pg2kinesis'

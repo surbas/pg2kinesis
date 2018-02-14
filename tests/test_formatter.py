@@ -55,48 +55,48 @@ def test___init__(formatter):
     assert patterns[u'test_table2:'].pattern == ur"name\[character varying\]:'?([\w\-]+)'?"
 
 
-def test__preprocess_change(formatter):
+def test__preprocess_test_decoding_change(formatter):
     # assert begin -> None + cur trans
     assert formatter.cur_xact == ''
-    result = formatter._preprocess_change(u'BEGIN 100')
-    assert result is None
+    result = formatter._preprocess_test_decoding_change(u'BEGIN 100')
+    assert result == []
     assert formatter.cur_xact == u'100'
 
     # assert commit -> None
     formatter.cur_xact = ''
-    result = formatter._preprocess_change(u'COMMIT')
-    assert result is None
+    result = formatter._preprocess_test_decoding_change(u'COMMIT')
+    assert result == []
     assert formatter.cur_xact == ''
 
     # error states
     with mock.patch.object(formatter, '_log_and_raise') as mock_log_and_raise:
-        formatter._preprocess_change(u'UNKNOWN BLING')
+        formatter._preprocess_test_decoding_change(u'UNKNOWN BLING')
         assert mock_log_and_raise.called
         mock_log_and_raise.assert_called_with(u'Unknown change: "UNKNOWN BLING"')
 
     with mock.patch.object(formatter, '_log_and_raise') as mock_log_and_raise:
-        formatter._preprocess_change(u"table not_a_table: UPDATE: uuid[uuid]:'00079f3e-0479-4475-acff-4f225cc5188a'")
+        formatter._preprocess_test_decoding_change(u"table not_a_table: UPDATE: uuid[uuid]:'00079f3e-0479-4475-acff-4f225cc5188a'")
         assert mock_log_and_raise.called
         mock_log_and_raise.assert_called_with(u'Unable to locate table: "not_a_table:"')
 
     # TODO: Disabled for now
     # with mock.patch.object(formatter, '_log_and_raise') as mock_log_and_raise:
-    #     formatter._preprocess_change(u"table test_table: UPDATE: not[not]:'00079f3e-0479-4475-acff-4f225cc5188a'")
+    #     formatter._preprocess_test_decoding_change(u"table test_table: UPDATE: not[not]:'00079f3e-0479-4475-acff-4f225cc5188a'")
     #     assert mock_log_and_raise.called
     #     mock_log_and_raise.assert_called_with(u'Unable to locate primary key for table "test_table"')
 
     # assert on proper match
     formatter.cur_xact = '1337'
-    change = formatter._preprocess_change(
-        u"table test_table: UPDATE: uuid[uuid]:'00079f3e-0479-4475-acff-4f225cc5188a'")
+    change = formatter._preprocess_test_decoding_change(
+        u"table test_table: UPDATE: uuid[uuid]:'00079f3e-0479-4475-acff-4f225cc5188a'")[0]
 
     assert change.xid == u'1337'
     assert change.table == u'test_table'
     assert change.operation == u'UPDATE'
     assert change.pkey == u'00079f3e-0479-4475-acff-4f225cc5188a'
 
-    change = formatter._preprocess_change(
-        u"table test_table2: DELETE: name[character varying]:'Bling-2'")
+    change = formatter._preprocess_test_decoding_change(
+        u"table test_table2: DELETE: name[character varying]:'Bling-2'")[0]
 
     assert change.xid == u'1337'
     assert change.table == u'test_table2'
@@ -114,32 +114,32 @@ def test_log_and_raise(formatter):
 
 
 def test___call__(formatter):
-    with mock.patch.object(formatter, '_preprocess_change', return_value=None) as mock_preprocess_change, \
+    with mock.patch.object(formatter, '_preprocess_test_decoding_change', return_value=[]) as mock_preprocess_test_decoding_change, \
             mock.patch.object(formatter, 'produce_formatted_message', return_value=None) as mock_pfm:
-        assert not mock_preprocess_change.called
-        result = formatter('fake message')
-        assert mock_preprocess_change.called
-        assert result is None
+        assert not mock_preprocess_test_decoding_change.called
+        result = formatter('COMMIT')
+        assert mock_preprocess_test_decoding_change.called
+        assert result == []
         assert not mock_pfm.called
 
-    with mock.patch.object(formatter, '_preprocess_change', return_value='blue') as mock_preprocess_change, \
+    with mock.patch.object(formatter, '_preprocess_test_decoding_change', return_value=['blue']) as mock_preprocess_test_decoding_change, \
             mock.patch.object(formatter, 'produce_formatted_message', return_value='blue msg') as mock_pfm:
-        assert not mock_preprocess_change.called
+        assert not mock_preprocess_test_decoding_change.called
         result = formatter('blue message')
-        assert mock_preprocess_change.called
-        assert result == 'blue msg'
+        assert mock_preprocess_test_decoding_change.called
+        assert result == ['blue msg']
         mock_pfm.assert_called_with('blue')
 
 
 def test_get_formatter():
     with mock.patch.object(Formatter, '__init__', return_value=None) as mocked:
-        result = get_formatter('CSVPayload', 1, 2, 3)
+        result = get_formatter('CSVPayload', 1, 2, 3, 4)
         assert isinstance(result, CSVPayloadFormatter)
         assert mocked.called
-        mocked.assert_called_with(1, 2, 3)
+        mocked.assert_called_with(1, 2, 3, 4)
 
     with mock.patch.object(Formatter, '__init__', return_value=None) as mocked:
-        result = get_formatter('CSV', 1, 2, 3)
+        result = get_formatter('CSV', 1, 2, 3, 4)
         assert isinstance(result, CSVFormatter)
         assert mocked.called
-        mocked.assert_called_with(1, 2, 3)
+        mocked.assert_called_with(1, 2, 3, 4)

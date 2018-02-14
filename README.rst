@@ -20,14 +20,14 @@ The fault tolerance comes from guarantees provided by the underlying technologie
 publishing inherent to the design of the program. Changes are first peeked from the replication slot and published to Kinesis.
 Once Kinesis successfully recieves a batch of records, we advance the `xmin <https://www.postgresql.org/docs/9.4/static/catalog-pg-replication-slots.html>`_ of
 the slot, thereby telling postgres it is safe to reclaim the space taken by the
-wal logs. As is always the case with logical replication slots, unacknowledged data on the slot will consume disk on the database until it is read.
+WAL. As is always the case with logical replication slots, unacknowledged data on the slot will consume disk on the database until it is read.
 
 There are other utilities that do similar things, often by injecting a C library into Postgres to do data transformations in place. Unfortunately these approaches are not suitable for managed databases like AWS' RDS where support for various plugins is limited and ultimately determined by the hosting provider.
 We specifically created pg2kinesis to make use of logical decoding on `Amazon's RDS for PostgreSQL <https://aws.amazon.com/rds/postgresql/>`_.
-Amazon only supports logical decoding if you use the built in `test_decoding <https://www.postgresql.org/docs/9.4/static/test-decoding.html>`_
-output plugin. What is special about our utility is it takes the output of the test_decoding plugin, transforms it based
+Amazon supports logical decoding with either the `test_decoding <https://www.postgresql.org/docs/9.4/static/test-decoding.html>`_ or `wal2json <https://aws.amazon.com/about-aws/whats-new/2017/07/amazon-rds-for-postgresql-supports-new-minor-versions-9-6-3-and-9-5-7-and-9-4-12-and-9-3-17/>`_
+output plugins. This utility takes the output of either plugin, transforms it based
 on a formatter you can define, guarantees publishing to a Kinesis stream
-in *transaction commit time order* and with a guarantees that *no data will be lost*.
+in *transaction commit time order* and with a guarantee that *no data will be lost*.
 
 Installation
 ------------
@@ -63,20 +63,35 @@ By default pg2kinesis attempts to connect to a local postgres instance and publi
 
 On successful start it will query your database for the primary key definitions of every table in ``--pg-dbname``. This is used to identify the correct column in the test_decoding output to publish. If a table does not have a primary key its changes will **NOT** be published.
 
-You have the choice for 2 different textual formats that will be sent to the kinesis stream:
+You have the choice for 3 different textual formats that will be sent to the kinesis stream:
 
-* ``CSVFormatter``: outputs stings to Kinesis that look like::
+* ``CSV``: outputs stings to Kinesis that look like::
 
     0,CDC,<transaction_id (xid)>,<table name>,<dml operation:DELETE|INSERT|UPDATE>,<primary key of row>
 
-* ``CSVPayloadFormatter``: outputs similar to the above except the 3rd column is now a json object representing the change.::
+* ``CSVPayload``: outputs similar to the above except the 3rd column is now a json object representing the change. If wal2json is being used, this can be either the full changed row or only the primary key.
 
+Primary key::
     0,CDC,{
             "xid": <transaction_id>
             "table": <...>
             "operation: <...>
             "pkey": <...>
           }
+
+Full change::
+    0,CDC,{
+            "xid": <transaction_id>
+            "change": {
+                "kind": "insert",
+                "schema": "public",
+                "table": "some_table",
+                "columnname": "id",
+                "columntype": "int4",
+                "columnvalue": 42
+            }
+          }
+
 
 Shout Outs
 ----------
@@ -93,8 +108,7 @@ pg2kinesis is based on the ideas of others including:
 Future Road Map
 ---------------
 
-* Allow payload format to be specified on Command Line.
+* Support all combinations of decoding plugins & message formatters
 * Allow HUPing to notify utility to regenerate primary key cache
 * Support above on a schedule specified via commandline with sensible default of once an hour.
-* Full Row information publishing (currently we only emit the DML, primary key and table on any type of change)
 * Python 3 Support

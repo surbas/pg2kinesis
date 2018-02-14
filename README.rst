@@ -77,7 +77,7 @@ environment the utility was invoked in.
 On successful start it will query your database for the primary key definitions
 of every table in ``--pg-dbname``. This is used to identify the correct column
 in the test_decoding output to publish. If a table does not have a primary key
-its changes will **NOT** be published.
+its changes will **NOT** be published unless using wal2json and ``--full-change``.
 
 You have the choice for 3 different textual formats that will be sent to the
 kinesis stream:
@@ -87,29 +87,33 @@ kinesis stream:
     0,CDC,<transaction_id (xid)>,<table name>,<dml operation:DELETE|INSERT|UPDATE>,<primary key of row>
 
 * ``CSVPayload``: outputs similar to the above except the 3rd column is now a
-json object representing the change. If wal2json is being used, this can be
-either the full changed row or only the primary key.
+  json object representing the change.
 
-Primary key::
-    0,CDC,{
-            "xid": <transaction_id>
-            "table": <...>
-            "operation: <...>
-            "pkey": <...>
-          }
+  .. code-block::
 
-Full change::
-    0,CDC,{
-            "xid": 30355,
-            "change": {
-                "kind": "insert",
-                "columnnames": ["a", "b"],
-                "columntypes": ["int4", "int4"],
-                "table": "foo",
-                "columnvalues": [1, null],
-                "schema": "public"
-            }
-           }
+      0,CDC,{
+        "xid": <transaction_id>
+        "table": <...>
+        "operation: <...>
+        "pkey": <...>
+      }
+
+* If ``wal2json`` is being used, this can either be the primary key as above or
+  the full changed row.
+
+  .. code-block::
+
+      0,CDC,{
+        "xid": 30355,
+        "change": {
+          "kind": "insert",
+          "columnnames": ["a", "b"],
+          "columntypes": ["int4", "int4"],
+          "table": "foo",
+          "columnvalues": [1, null],
+          "schema": "public"
+        }
+      }
 
 
 Shout Outs

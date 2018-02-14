@@ -41,7 +41,6 @@ def test_put_message(writer):
     msg = Mock()
     msg.change.xid = 10
     msg.fmt_msg = object()
-    msg.is_bulk = False
 
     writer.last_send = 1445444940.0 - 10      # "2015-10-21 16:28:50"
     with freeze_time('2015-10-21 16:29:00'):  # -> 1445444940.0

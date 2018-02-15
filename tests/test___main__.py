@@ -6,6 +6,7 @@ from pg2kinesis.__main__ import Consume
 
 def test_consume():
     mock_formatter = Mock(return_value='fmt_msg')
+    mock_formatter.cur_xact = "TEST_TRANSACTION"
     mock_writer = Mock()
 
     consume = Consume(mock_formatter, mock_writer)

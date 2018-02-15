@@ -13,7 +13,7 @@ FullChange = namedtuple('FullChange', 'xid, change')
 # Final product of Formatter, a Change and the Change formatted.
 Message = namedtuple('Message', 'change, fmt_msg')
 
-COL_TYPE_VALUE_TEMPLATE_PAT = ur"{col_name}\[{col_type}\]:'?([\w\-]+)'?"
+COL_TYPE_VALUE_TEMPLATE_PAT = u"{col_name}\\[{col_type}\\]:'?([\\w\\-]+)'?"
 MISSING_TABLE_ERR = 'Unable to locate table: "{}"'
 MISSING_PK_ERR = 'Unable to locate primary key for table "{}"'
 
@@ -29,7 +29,7 @@ class Formatter(object):
         self.output_plugin = output_plugin
         self.primary_key_map = primary_key_map
         self.full_change = full_change
-        self.table_pat = table_pat if table_pat is not None else ur'[\w_\.]+'
+        self.table_pat = table_pat if table_pat is not None else u'[\\w_\\.]+'
         self.table_re = re.compile(self.table_pat)
         self.cur_xact = ''
 

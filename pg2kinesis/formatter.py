@@ -1,6 +1,7 @@
 import json
 import re
 import sys
+import six
 
 from .log import logger
 
@@ -33,7 +34,7 @@ class Formatter(object):
         self.table_re = re.compile(self.table_pat)
         self.cur_xact = ''
 
-        for k, v in primary_key_map.iteritems():
+        for k, v in six.iteritems(primary_key_map):
             # ":" added to make later look up not need to trim trailing ":".
             self._primary_key_patterns[k + ":"] = re.compile(
                 COL_TYPE_VALUE_TEMPLATE_PAT.format(col_name=v.col_name, col_type=v.col_type)
@@ -155,8 +156,9 @@ class CSVFormatter(Formatter):
 class CSVPayloadFormatter(Formatter):
     VERSION = 0
     def produce_formatted_message(self, change):
+        print(dir(change))
         fmt_msg = '{},{},{}'.format(CSVFormatter.VERSION, CSVFormatter.TYPE,
-                                    json.dumps(change.__dict__))
+                                    json.dumps(change._asdict()))
         return Message(change=change, fmt_msg=fmt_msg)
 
 

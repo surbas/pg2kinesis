@@ -254,7 +254,7 @@ def test_log_and_raise(formatter):
     with mock.patch('logging.Logger.error') as mock_log, pytest.raises(Exception) as e_info:
         formatter._log_and_raise(u'HELP!')
 
-    assert e_info.value.message == u'HELP!'
+    assert str(e_info.value) == u'HELP!'
     mock_log.assert_called_with(u'HELP!')
 
 

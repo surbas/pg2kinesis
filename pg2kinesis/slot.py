@@ -58,7 +58,7 @@ class SlotReader(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
-        Be a good citezen and try to clean up on the way out.
+        Be a good citizen and try to clean up on the way out.
         """
         if self._keepalive_thread:
             try:

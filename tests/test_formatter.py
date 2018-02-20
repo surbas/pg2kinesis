@@ -51,8 +51,8 @@ def test___init__(formatter):
     assert u'public.test_table2:' in patterns, 'with colon'
     assert u'public.test_table' not in patterns, 'without colon should not be in patterns'
     assert u'public.test_table2' not in patterns, 'without colon should not be in patterns'
-    assert patterns[u'public.test_table:'].pattern == u"uuid\\[uuid\\]:'?([\\w\\-]+)'?"
-    assert patterns[u'public.test_table2:'].pattern == u"name\\[character varying\\]:'?([\\w\\-]+)'?"
+    assert patterns[u'public.test_table:'].pattern == r"uuid\[uuid\]:'?([\w\-]+)'?"
+    assert patterns[u'public.test_table2:'].pattern == r"name\[character varying\]:'?([\w\-]+)'?"
 
 
 def test__preprocess_test_decoding_change(formatter):

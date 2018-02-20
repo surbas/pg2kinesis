@@ -46,7 +46,7 @@ Installation
 Prerequisites
 ^^^^^^^^^^^^^
 
- #. Python 2.7.*+
+ #. Python 2.7*, 3.3+
  #. AWS-CLI installed and configured
  #. A PostgreSQL 9.4+ server with logical replication enabled
  #. A Kinesis stream

@@ -6,3 +6,4 @@ dist/
 pg2kinesis.egg-info/
 tests/__pycache__/
 *.DS_Store
+env/

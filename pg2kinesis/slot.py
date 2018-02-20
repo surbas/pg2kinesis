@@ -32,11 +32,11 @@ class SlotReader(object):
     ORDER BY ordinal_position;
     """
 
-    def __init__(self, database, host, port, user, slot_name,
+    def __init__(self, database, host, port, user, password, slot_name,
                  output_plugin='test_decoding', keepalive_window=30):
         # Cool fact: using connections as context manager doesn't close them on
         # success after leaving with block
-        self._db_confg = dict(database=database, host=host, port=port, user=user)
+        self._db_confg = dict(database=database, host=host, port=port, user=user, password=password)
         self._keepalive_window = keepalive_window
         self._repl_conn = None
         self._repl_cursor = None

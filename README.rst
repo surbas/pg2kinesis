@@ -62,7 +62,7 @@ To run tests you will need a clone of the repo and have to install some addition
  #. ``git clone git@github.com:handshake/pg2kinesis.git``
  #. ``cd pg2kinesis``
  #. ``pip install -r requirements.txt``
- #. ``pytest``
+ #. ``(cd tests && pytest)``
 
 
 Usage

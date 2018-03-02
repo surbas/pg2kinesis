@@ -14,7 +14,6 @@ from .log import logger
               help='Postgres server location. Leave empty if localhost.')
 @click.option('--pg-port', '-p', default='5432', help='Postgres port.')
 @click.option('--pg-user', '-u', help='Postgres user')
-@click.option('--pg-password', help='Postgres user password', default='')
 @click.option('--pg-sslmode', help='Postgres SSL mode', default='prefer')
 @click.option('--pg-slot-name', '-s', default='pg2kinesis',
               help='Postgres replication slot name.')
@@ -33,7 +32,7 @@ from .log import logger
               help='Attempt to on start create a the slot.')
 @click.option('--recreate-slot', default=False, is_flag=True,
               help='Deletes the slot on start if it exists and then creates.')
-def main(pg_dbname, pg_host, pg_port, pg_user, pg_password, pg_sslmode, pg_slot_name, pg_slot_output_plugin,
+def main(pg_dbname, pg_host, pg_port, pg_user, pg_sslmode, pg_slot_name, pg_slot_output_plugin,
          stream_name, message_formatter, table_pat, full_change, create_slot, recreate_slot):
 
     if full_change:
@@ -44,7 +43,7 @@ def main(pg_dbname, pg_host, pg_port, pg_user, pg_password, pg_sslmode, pg_slot_
     logger.info('Getting kinesis stream writer')
     writer = StreamWriter(stream_name)
 
-    with SlotReader(pg_dbname, pg_host, pg_port, pg_user, pg_password, pg_sslmode, pg_slot_name,
+    with SlotReader(pg_dbname, pg_host, pg_port, pg_user, pg_sslmode, pg_slot_name,
                     pg_slot_output_plugin) as reader:
 
         if recreate_slot:

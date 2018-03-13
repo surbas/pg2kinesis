@@ -28,7 +28,7 @@ CLASSIFIERS = [
     'Topic :: Utilities',
 ]
 INSTALL_REQUIRES = [
-    'aws_kinesis_agg>=1.0.1',
+    'aws_kinesis_agg>=1.1.0',
     'boto3>=1.4.1',
     'botocore>=1.4.64',
     'click>=6.3.0',

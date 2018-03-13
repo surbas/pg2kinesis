@@ -51,16 +51,6 @@ Prerequisites
  #. A PostgreSQL 9.4+ server with logical replication enabled
  #. A Kinesis stream
 
-Pre-Install Instructions for Python 3
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-pg2kinesis depends on the `aws_kinesis_agg<https://github.com/awslabs/kinesis-aggregation/>`_
-package, which is currently testing a `stable branch<https://github.com/awslabs/kinesis-aggregation/tree/py3-compat>`_
-providing python3 support. Until this branch makes it's way to the cheeseshop,
-it's necessary to install this dependency from source before installing pg2kinesis::
-
-    sudo sh -c 'cd `mktemp -d` && curl -L https://github.com/awslabs/kinesis-aggregation/archive/py3-compat.tar.gz | tar zxf - && cd kinesis-aggregation-py3-compat/python && python setup.py install'
-
 Install
 ^^^^^^^
 

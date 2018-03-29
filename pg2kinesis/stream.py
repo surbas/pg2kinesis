@@ -33,7 +33,7 @@ class StreamWriter(object):
         agg_record = None
 
         if fmt_msg:
-            agg_record = self._record_agg.add_user_record(fmt_msg.change.xid, fmt_msg.fmt_msg)
+            agg_record = self._record_agg.add_user_record(str(fmt_msg.change.xid), fmt_msg.fmt_msg)
 
         # agg_record will be a complete record if aggregation is full.
         if agg_record or (self._send_window and time.time() - self.last_send > self._send_window):
@@ -47,7 +47,7 @@ class StreamWriter(object):
         if agg_record is None:
             return
 
-        pk, ehk, data = agg_record.get_contents()
+        pk, _, data = agg_record.get_contents()
         logger.info('Sending %s records. Size %s. PK: %s' %
                     (agg_record.get_num_user_records(), agg_record.get_size_bytes(), pk))
 
@@ -55,7 +55,6 @@ class StreamWriter(object):
         while back_off < self.back_off_limit:
             try:
                 result = self._kinesis.put_record(Data=data,
-                                                  ExplicitHashKey=ehk,
                                                   PartitionKey=pk,
                                                   SequenceNumberForOrdering=self._sequence_number_for_ordering,
                                                   StreamName=self.stream_name)

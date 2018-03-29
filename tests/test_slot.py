@@ -9,12 +9,10 @@ from pg2kinesis.slot import SlotReader
 
 @pytest.fixture
 def slot():
-    slot = SlotReader('blah_db', 'blah_host', 'blah_port', 'blah_user', 'blah_sslmode', 'pg2kinesis',
-                      keepalive_window=0)
+    slot = SlotReader('blah_db', 'blah_host', 'blah_port', 'blah_user', 'blah_sslmode', 'pg2kinesis')
     slot._repl_cursor = Mock()
     slot._repl_conn = Mock()
     slot._normal_conn = Mock()
-    slot._keepalive_thread = Mock()
 
     return slot
 
@@ -22,78 +20,32 @@ def slot():
 def test__enter__(slot):
     # returns its self
 
-    with patch.object(slot, '_get_connection', side_effects=[Mock(), Mock()]) as mock_gc, \
-            patch.object(slot, '_send_keepalive') as mock_ka:
+    with patch.object(slot, '_get_connection', side_effects=[Mock(), Mock()]) as mock_gc:
         assert slot == slot.__enter__(), 'Returns itself'
         assert mock_gc.call_count == 2
 
         assert call.set_isolation_level(0) in slot._normal_conn.method_calls, 'make sure we are in autocommit'
         assert call.cursor() in slot._repl_conn.method_calls, 'we opened a cursor'
 
-        assert not mock_ka.called, "with no window we didn't start keep alive"
-
-    slot._keepalive_window = 1
-    with patch.object(slot, '_get_connection', side_effects=[Mock(), Mock()]) as mock_gc, \
-            patch.object(slot, '_send_keepalive') as mock_ka:
+    with patch.object(slot, '_get_connection', side_effects=[Mock(), Mock()]) as mock_gc:
         slot.__enter__()
-        assert mock_ka.called, " we started up keepalive"
 
 
 def test__exit__(slot):
-    slot._keepalive_window = 10
     slot.__exit__(None, None, None)
 
     assert call.close() in slot._repl_cursor.method_calls
     assert call.close() in slot._repl_conn.method_calls
     assert call.close() in slot._normal_conn.method_calls
-    assert call.join(timeout=13) in slot._keepalive_thread.method_calls
 
     slot._repl_cursor.close = Mock(side_effect=Exception)
     slot._repl_conn.close = Mock(side_effect=Exception)
     slot._normal_conn.close= Mock(side_effect=Exception)
-    slot._keepalive_thread.join = Mock(side_effect=Exception)
     slot.__exit__(None, None, None)
 
-    assert slot._keepalive_thread.join.called
     assert slot._repl_cursor.close.called, "Still called even thought call above raised"
     assert slot._repl_conn.close.called, "Still called even thought call above raised"
     assert slot._normal_conn.close.called, "Still called even thought call above raised"
-
-
-
-def assert_stuff_about_keep_alive(slot, mock_timer, exception, logging_called):
-    mock_timer.reset()
-    slot._repl_cursor.reset()
-
-    with patch('logging.Logger.exception') as mock_log:
-        slot._repl_cursor.send_feedback = Mock(side_effect=exception)
-        thread = slot._send_keepalive()
-
-    assert mock_log.called == logging_called
-    assert call.send_feedback() in slot._repl_cursor.method_calls
-    assert mock_timer.called
-    assert thread.daemon == True, 'It is a daemon'
-    assert call.start() in thread.method_calls, 'It has been started'
-
-
-
-def test__send_keep_alive(slot):
-    with patch('threading.Timer') as mock_timer:
-        # No matter what we schedule keep alive thread. Sometimes we log an error
-        db_error = psycopg2.DatabaseError()
-        db_error.message = 'Log ME!'
-        assert_stuff_about_keep_alive(slot, mock_timer, db_error, True)
-
-        db_error = psycopg2.DatabaseError()
-        db_error.message = 'no COPY in progress\n'
-        assert_stuff_about_keep_alive(slot, mock_timer, db_error, False)
-
-        error = Exception()
-        error.message = 'no COPY in progress\n'
-        assert_stuff_about_keep_alive(slot, mock_timer, error, True)
-
-        # Happy Path
-        assert_stuff_about_keep_alive(slot, mock_timer, None, False)
 
 
 def test_create_slot(slot):

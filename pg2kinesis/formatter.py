@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import json
 import re
 import sys
@@ -13,7 +15,7 @@ FullChange = namedtuple('FullChange', 'xid, change')
 # Final product of Formatter, a Change and the Change formatted.
 Message = namedtuple('Message', 'change, fmt_msg')
 
-COL_TYPE_VALUE_TEMPLATE_PAT = ur"{col_name}\[{col_type}\]:'?([\w\-]+)'?"
+COL_TYPE_VALUE_TEMPLATE_PAT = r"{col_name}\[{col_type}\]:'?([\w\-]+)'?"
 MISSING_TABLE_ERR = 'Unable to locate table: "{}"'
 MISSING_PK_ERR = 'Unable to locate primary key for table "{}"'
 
@@ -29,11 +31,11 @@ class Formatter(object):
         self.output_plugin = output_plugin
         self.primary_key_map = primary_key_map
         self.full_change = full_change
-        self.table_pat = table_pat if table_pat is not None else ur'[\w_\.]+'
+        self.table_pat = table_pat if table_pat is not None else r'[\w_\.]+'
         self.table_re = re.compile(self.table_pat)
         self.cur_xact = ''
 
-        for k, v in primary_key_map.iteritems():
+        for k, v in getattr(primary_key_map, 'iteritems', primary_key_map.items)():
             # ":" added to make later look up not need to trim trailing ":".
             self._primary_key_patterns[k + ":"] = re.compile(
                 COL_TYPE_VALUE_TEMPLATE_PAT.format(col_name=v.col_name, col_type=v.col_type)
@@ -45,7 +47,7 @@ class Formatter(object):
         into a Change tuple currently only looking for primary key.
 
         They look like this:
-            u"table table_test: UPDATE: uuid[uuid]:'00079f3e-0479-4475-acff-4f225cc5188a' another_col[text]'bling'"
+            "table table_test: UPDATE: uuid[uuid]:'00079f3e-0479-4475-acff-4f225cc5188a' another_col[text]'bling'"
 
         :param change: a message payload from postgres' test_decoding plugin.
         :return: A list of type Change
@@ -156,7 +158,7 @@ class CSVPayloadFormatter(Formatter):
     VERSION = 0
     def produce_formatted_message(self, change):
         fmt_msg = '{},{},{}'.format(CSVFormatter.VERSION, CSVFormatter.TYPE,
-                                    json.dumps(change.__dict__))
+                                    json.dumps(change._asdict()))
         return Message(change=change, fmt_msg=fmt_msg)
 
 

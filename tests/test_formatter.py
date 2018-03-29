@@ -51,8 +51,8 @@ def test___init__(formatter):
     assert u'public.test_table2:' in patterns, 'with colon'
     assert u'public.test_table' not in patterns, 'without colon should not be in patterns'
     assert u'public.test_table2' not in patterns, 'without colon should not be in patterns'
-    assert patterns[u'public.test_table:'].pattern == ur"uuid\[uuid\]:'?([\w\-]+)'?"
-    assert patterns[u'public.test_table2:'].pattern == ur"name\[character varying\]:'?([\w\-]+)'?"
+    assert patterns[u'public.test_table:'].pattern == r"uuid\[uuid\]:'?([\w\-]+)'?"
+    assert patterns[u'public.test_table2:'].pattern == r"name\[character varying\]:'?([\w\-]+)'?"
 
 
 def test__preprocess_test_decoding_change(formatter):
@@ -254,7 +254,7 @@ def test_log_and_raise(formatter):
     with mock.patch('logging.Logger.error') as mock_log, pytest.raises(Exception) as e_info:
         formatter._log_and_raise(u'HELP!')
 
-    assert e_info.value.message == u'HELP!'
+    assert str(e_info.value) == u'HELP!'
     mock_log.assert_called_with(u'HELP!')
 
 

@@ -43,16 +43,19 @@ in *transaction commit time order* and with a guarantee that *no data will be lo
 Installation
 ------------
 
-Prerequisites:
+Prerequisites
+^^^^^^^^^^^^^
 
- #. Python 2.7.*
+ #. Python 2.7*, 3.3+
  #. AWS-CLI installed and configured
  #. A PostgreSQL 9.4+ server with logical replication enabled
  #. A Kinesis stream
 
-Install:
+Install
+^^^^^^^
 
  ``pip install pg2kinesis``
+
 
 Tests
 -----
@@ -135,4 +138,3 @@ Future Road Map
 * Support full change output from test_decoding plugin
 * Allow HUPing to notify utility to regenerate primary key cache
 * Support above on a schedule specified via commandline with sensible default of once an hour.
-* Python 3 Support

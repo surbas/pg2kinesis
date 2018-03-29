@@ -33,11 +33,10 @@ class SlotReader(object):
     """
 
     def __init__(self, database, host, port, user, sslmode, slot_name,
-                 output_plugin='test_decoding', keepalive_window=30):
+                 output_plugin='test_decoding'):
         # Cool fact: using connections as context manager doesn't close them on
         # success after leaving with block
         self._db_confg = dict(database=database, host=host, port=port, user=user, sslmode=sslmode)
-        self._keepalive_window = keepalive_window
         self._repl_conn = None
         self._repl_cursor = None
         self._normal_conn = None
@@ -51,20 +50,12 @@ class SlotReader(object):
         self._repl_conn = self._get_connection(connection_factory=psycopg2.extras.LogicalReplicationConnection)
         self._repl_cursor = self._repl_conn.cursor()
 
-        if self._keepalive_window:
-            self._keepalive_thread = self._send_keepalive()
-
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
         Be a good citizen and try to clean up on the way out.
         """
-        if self._keepalive_thread:
-            try:
-                self._keepalive_thread.join(timeout=self._keepalive_window+3)
-            except Exception:
-                pass
 
         try:
             self._repl_cursor.close()
@@ -80,24 +71,6 @@ class SlotReader(object):
             self._normal_conn.close()
         except Exception:
             pass
-
-
-    def _send_keepalive(self):
-
-        # keepalive with no args.
-        try:
-            self._repl_cursor.send_feedback()
-        except psycopg2.DatabaseError as e:
-            if not e.message == 'no COPY in progress\n':
-                logger.exception(e)
-        except Exception as e:
-            logger.exception(e)
-
-        # schedule myself in the future
-        t = threading.Timer(self._keepalive_window, self._send_keepalive)
-        t.daemon = True
-        t.start()
-        return t
 
     def _get_connection(self, connection_factory=None, cursor_factory=None):
         return psycopg2.connect(connection_factory=connection_factory,

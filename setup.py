@@ -24,16 +24,21 @@ CLASSIFIERS = [
     'Programming Language :: Python',
     'Programming Language :: Python :: 2',
     'Programming Language :: Python :: 2.7',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.3',
+    'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: Implementation :: CPython',
     'Topic :: Utilities',
 ]
 INSTALL_REQUIRES = [
     'aws_kinesis_agg>=1.1.0',
-    'boto3>=1.4.1',
-    'botocore>=1.4.64',
+    'boto3>=1.6.19',
+    'botocore>=1.9.19',
     'click>=6.3.0',
     'protobuf>=3.0.0',
-    'psycopg2>=2.7.1',
+    'psycopg2>=2.7.4',
 ]
 
 ###############################################################################

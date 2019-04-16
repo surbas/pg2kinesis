@@ -85,7 +85,7 @@ its changes will **NOT** be published unless using wal2json and ``--full-change`
 You have the choice for 3 different textual formats that will be sent to the
 kinesis stream:
 
-* ``CSV``: outputs stings to Kinesis that look like::
+* ``CSV``: outputs strings to Kinesis that look like::
 
     0,CDC,<transaction_id (xid)>,<table name>,<dml operation:DELETE|INSERT|UPDATE>,<primary key of row>
 

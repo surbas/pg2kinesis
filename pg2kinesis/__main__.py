@@ -32,8 +32,11 @@ from .log import logger
               help='Attempt to on start create a the slot.')
 @click.option('--recreate-slot', default=False, is_flag=True,
               help='Deletes the slot on start if it exists and then creates.')
+@click.option('--change-kind', default='All',
+              type=click.Choice(['Update', 'Insert', 'Delete', 'Truncate']),
+              help='Option to specify which type of change to stream. Default is all changes.')
 def main(pg_dbname, pg_host, pg_port, pg_user, pg_sslmode, pg_slot_name, pg_slot_output_plugin,
-         stream_name, message_formatter, table_pat, full_change, create_slot, recreate_slot):
+         stream_name, message_formatter, table_pat, change_kind, full_change, create_slot, recreate_slot):
 
     if full_change:
         assert message_formatter == 'CSVPayload', 'Full changes must be formatted as JSON.'
@@ -54,7 +57,7 @@ def main(pg_dbname, pg_host, pg_port, pg_user, pg_sslmode, pg_slot_name, pg_slot
 
         pk_map = reader.primary_key_map
         formatter = get_formatter(message_formatter, pk_map,
-                                  pg_slot_output_plugin, full_change, table_pat)
+                                  pg_slot_output_plugin, full_change, table_pat, change_kind)
 
         consume = Consume(formatter, writer)
 

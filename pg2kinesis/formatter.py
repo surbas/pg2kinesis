@@ -25,13 +25,14 @@ class Formatter(object):
     IGNORED_CHANGES = {'COMMIT'}
 
     def __init__(self, primary_key_map, output_plugin='test_decoding',
-                 full_change=False, table_pat=None):
+                 full_change=False, table_pat=None, change_kind=None):
 
         self._primary_key_patterns = {}
         self.output_plugin = output_plugin
         self.primary_key_map = primary_key_map
         self.full_change = full_change
         self.table_pat = table_pat if table_pat is not None else r'[\w_\.]+'
+        self.change_kind = change_kind
         self.table_re = re.compile(self.table_pat)
         self.cur_xact = ''
 
@@ -109,25 +110,30 @@ class Formatter(object):
         self.cur_xact = change_dictionary['xid']
         changes = []
 
+        logger.info('Change kind to stream is %s' % (self.change_kind))
+
         for change in change_dictionary['change']:
-            table_name = change['table']
-            schema = change['schema']
-            if self.table_re.search(table_name):
-                if self.full_change:
-                    changes.append(FullChange(xid=self.cur_xact, change=change))
-                else:
-                    try:
-                        full_table = '{}.{}'.format(schema, table_name)
-                        primary_key = self.primary_key_map[full_table]
-                    except KeyError:
-                        self._log_and_raise(MISSING_TABLE_ERR.format(full_table))
+
+            if change['kind'].lower() == self.change_kind.lower():
+                table_name = change['table']
+                schema = change['schema']
+
+                if self.table_re.search(table_name):
+                    if self.full_change:
+                        changes.append(FullChange(xid=self.cur_xact, change=change))
                     else:
-                        value_index = change['columnnames'].index(primary_key.col_name)
-                        pkey = str(change['columnvalues'][value_index])
-                        changes.append(Change(xid=self.cur_xact,
-                                              table=full_table,
-                                              operation=change['kind'].lower(),
-                                              pkey=pkey))
+                        try:
+                            full_table = '{}.{}'.format(schema, table_name)
+                            primary_key = self.primary_key_map[full_table]
+                        except KeyError:
+                            self._log_and_raise(MISSING_TABLE_ERR.format(full_table))
+                        else:
+                            value_index = change['columnnames'].index(primary_key.col_name)
+                            pkey = str(change['columnvalues'][value_index])
+                            changes.append(Change(xid=self.cur_xact,
+                                                  table=full_table,
+                                                  operation=change['kind'].lower(),
+                                                  pkey=pkey))
         return changes
 
     @staticmethod
@@ -162,6 +168,6 @@ class CSVPayloadFormatter(Formatter):
         return Message(change=change, fmt_msg=fmt_msg)
 
 
-def get_formatter(name, primary_key_map, output_plugin, full_change, table_pat):
+def get_formatter(name, primary_key_map, output_plugin, full_change, table_pat, change_kind):
     formatter_f = getattr(sys.modules[__name__], '%sFormatter' % name)
-    return formatter_f(primary_key_map, output_plugin, full_change, table_pat)
+    return formatter_f(primary_key_map, output_plugin, full_change, table_pat, change_kind)

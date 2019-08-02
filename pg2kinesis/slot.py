@@ -120,7 +120,7 @@ class SlotReader(object):
                 logger.info('Slot %s was not found.' % self.slot_name)
 
     def process_replication_stream(self, consume):
-        logger.info('Starting the consumption of slot "%s"!' % self.slot_name)
+        logger.info('Starting the sfasdfasd consumption of slot "%s"!' % self.slot_name)
         if self.output_plugin == 'wal2json':
             options = {'include-xids': 1}
         else:

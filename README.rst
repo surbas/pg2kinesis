@@ -2,8 +2,6 @@
 pg2kinesis
 ==========
 
-.. image:: https://travis-ci.org/handshake/pg2kinesis.svg?branch=master
-    :target: https://travis-ci.org/handshake/pg2kinesis/
 
 pg2kinesis uses `logical decoding
 <https://www.postgresql.org/docs/9.4/static/logicaldecoding.html>`_

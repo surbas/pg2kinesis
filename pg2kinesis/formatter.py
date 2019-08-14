@@ -110,11 +110,9 @@ class Formatter(object):
         self.cur_xact = change_dictionary['xid']
         changes = []
 
-        logger.info('Change kind to stream is %s' % (self.change_kind))
-
         for change in change_dictionary['change']:
 
-            if change['kind'].lower() == self.change_kind.lower():
+            if change['kind'].lower() == self.change_kind.lower() or self.change_kind.lower() == 'all':
                 table_name = change['table']
                 schema = change['schema']
 

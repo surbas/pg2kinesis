@@ -32,8 +32,8 @@ from .log import logger
               help='Attempt to on start create a the slot.')
 @click.option('--recreate-slot', default=False, is_flag=True,
               help='Deletes the slot on start if it exists and then creates.')
-@click.option('--change-kind', default='All',
-              type=click.Choice(['All', 'Update', 'Insert', 'Delete', 'Truncate']),
+@click.option('--change-kind', default='all',
+              type=click.Choice(['all', 'update', 'insert', 'delete', 'truncate']),
               help='Option to specify which type of change to stream. Default is all changes.')
 def main(pg_dbname, pg_host, pg_port, pg_user, pg_sslmode, pg_slot_name, pg_slot_output_plugin,
          stream_name, message_formatter, table_pat, change_kind, full_change, create_slot, recreate_slot):

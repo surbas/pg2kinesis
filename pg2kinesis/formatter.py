@@ -11,6 +11,7 @@ from collections import namedtuple
 # Tuples representing changes as pulled from database
 Change = namedtuple('Change', 'xid, table, operation, pkey')
 FullChange = namedtuple('FullChange', 'xid, change')
+FullChange.operation = property(lambda self: self.change.get('kind'))
 
 # Final product of Formatter, a Change and the Change formatted.
 Message = namedtuple('Message', 'change, fmt_msg')
@@ -104,7 +105,7 @@ class Formatter(object):
 
         change_dictionary = json.loads(change)
         if not change_dictionary:
-            return None
+            return []
 
         self.cur_xact = change_dictionary['xid']
         changes = []
@@ -143,7 +144,7 @@ class Formatter(object):
         return [self.produce_formatted_message(pp_change) for pp_change in pp_changes]
 
     def produce_formatted_message(self, change):
-        return change
+        raise NotImplementedError
 
 
 class CSVFormatter(Formatter):

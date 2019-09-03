@@ -4,7 +4,7 @@ import time
 import click
 
 from .slot import SlotReader
-from .formatter import get_formatter
+from .formatter import get_formatter, Change as ChangeTuple, FullChange as FullChangeTuple, Message as MessageTuple
 from .stream import StreamWriter
 from .log import logger
 
@@ -32,8 +32,11 @@ from .log import logger
               help='Attempt to on start create a the slot.')
 @click.option('--recreate-slot', default=False, is_flag=True,
               help='Deletes the slot on start if it exists and then creates.')
+@click.option('--change-kind', default='all',
+              type=click.Choice(['all', 'update', 'insert', 'delete', 'truncate']),
+              help='Option to specify which type of change to stream. Default is all changes.')
 def main(pg_dbname, pg_host, pg_port, pg_user, pg_sslmode, pg_slot_name, pg_slot_output_plugin,
-         stream_name, message_formatter, table_pat, full_change, create_slot, recreate_slot):
+         stream_name, message_formatter, table_pat, change_kind, full_change, create_slot, recreate_slot):
 
     if full_change:
         assert message_formatter == 'CSVPayload', 'Full changes must be formatted as JSON.'
@@ -56,13 +59,13 @@ def main(pg_dbname, pg_host, pg_port, pg_user, pg_sslmode, pg_slot_name, pg_slot
         formatter = get_formatter(message_formatter, pk_map,
                                   pg_slot_output_plugin, full_change, table_pat)
 
-        consume = Consume(formatter, writer)
+        consume = Consume(formatter, writer, change_kind)
 
         # Blocking. Responds to Control-C.
         reader.process_replication_stream(consume)
 
 class Consume(object):
-    def __init__(self, formatter, writer):
+    def __init__(self, formatter, writer, change_kind):
         self.cum_msg_count = 0
         self.cum_msg_size = 0
         self.msg_window_size = 0
@@ -71,6 +74,18 @@ class Consume(object):
 
         self.formatter = formatter
         self.writer = writer
+        self.change_kind = change_kind
+
+    def msg_is_relevant(self, fmt_msg):
+        if self.change_kind == 'all':
+            return True
+        if not isinstance(fmt_msg, MessageTuple):
+            return False
+        if isinstance(fmt_msg.change, ChangeTuple):
+            return self.change_kind == fmt_msg.change.operation.lower()
+        if isinstance(fmt_msg.change, FullChangeTuple):
+            return self.change_kind == fmt_msg.change.change.get('kind', '').lower()
+        return False
 
     def __call__(self, change):
         self.cum_msg_count += 1
@@ -84,6 +99,9 @@ class Consume(object):
         progress_msg = 'xid: {:12} win_count:{:>10} win_size:{:>10}mb cum_count:{:>10} cum_size:{:>10}mb'
 
         for fmt_msg in fmt_msgs:
+            if not self.msg_is_relevant(fmt_msg):
+                fmt_msg = None
+
             did_put = self.writer.put_message(fmt_msg)
             if did_put:
                 change.cursor.send_feedback(flush_lsn=change.data_start)

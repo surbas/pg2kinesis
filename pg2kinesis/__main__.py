@@ -9,23 +9,7 @@ from .stream import StreamWriter
 from .log import logger
 
 
-SUPPORTED_OPERATIONS = {
-    rep_type[0]: rep_type
-    for rep_type in ['all', 'update', 'insert', 'delete', 'truncate']
-}
-
-
-def parse_operations_param(value):
-    operations = [
-        SUPPORTED_OPERATIONS.get(operation_code)
-        for operation_code in (value or 'a')
-    ]
-    if None in operations:
-        raise click.BadParameter('Unknown operation type to be replicated.')
-    if 'all' in operations:
-        return parse_operations_param('udit')
-    return operations
-
+SUPPORTED_OPERATIONS = ['update', 'insert', 'delete', 'truncate']
 
 @click.command()
 @click.option('--pg-dbname', '-d', help='Database to connect to.')
@@ -51,17 +35,18 @@ def parse_operations_param(value):
               help='Attempt to on start create a the slot.')
 @click.option('--recreate-slot', default=False, is_flag=True,
               help='Deletes the slot on start if it exists and then creates.')
-@click.option('--operations', default='a', type=parse_operations_param,
-               help = 'Which operations to replicate to kinesis, can be a combination of: '
-                      'a[ll], u[pdate], i[nsert], d[elete], t[runcate]. '
-                      'Default: a')
+@click.option('--operations', default='all', type=click.Choice(['all'] + SUPPORTED_OPERATIONS),
+              multiple=True, help = 'Which operations to replicate to kinesis, Default: all')
 def main(pg_dbname, pg_host, pg_port, pg_user, pg_sslmode, pg_slot_name, pg_slot_output_plugin,
          stream_name, message_formatter, table_pat, operations, full_change, create_slot, recreate_slot):
+    if 'all' in operations:
+        operations = SUPPORTED_OPERATIONS
+
     if full_change:
         assert message_formatter == 'CSVPayload', 'Full changes must be formatted as JSON.'
         assert pg_slot_output_plugin == 'wal2json', 'Full changes must use wal2json.'
 
-    logger.info('Starting pg2kinesis')
+    logger.info('Starting pg2kinesis replicating the following operations: %s', ','.join(operations))
     logger.info('Getting kinesis stream writer')
     writer = StreamWriter(stream_name)
 

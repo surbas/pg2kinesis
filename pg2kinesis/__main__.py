@@ -8,6 +8,9 @@ from .formatter import get_formatter
 from .stream import StreamWriter
 from .log import logger
 
+
+SUPPORTED_OPERATIONS = ['update', 'insert', 'delete', 'truncate']
+
 @click.command()
 @click.option('--pg-dbname', '-d', help='Database to connect to.')
 @click.option('--pg-host', '-h', default='',
@@ -32,14 +35,18 @@ from .log import logger
               help='Attempt to on start create a the slot.')
 @click.option('--recreate-slot', default=False, is_flag=True,
               help='Deletes the slot on start if it exists and then creates.')
+@click.option('--operations', default='all', type=click.Choice(['all'] + SUPPORTED_OPERATIONS),
+              multiple=True, help = 'Which operations to replicate to kinesis, Default: all')
 def main(pg_dbname, pg_host, pg_port, pg_user, pg_sslmode, pg_slot_name, pg_slot_output_plugin,
-         stream_name, message_formatter, table_pat, full_change, create_slot, recreate_slot):
+         stream_name, message_formatter, table_pat, operations, full_change, create_slot, recreate_slot):
+    if 'all' in operations:
+        operations = SUPPORTED_OPERATIONS
 
     if full_change:
         assert message_formatter == 'CSVPayload', 'Full changes must be formatted as JSON.'
         assert pg_slot_output_plugin == 'wal2json', 'Full changes must use wal2json.'
 
-    logger.info('Starting pg2kinesis')
+    logger.info('Starting pg2kinesis replicating the following operations: %s', ','.join(operations))
     logger.info('Getting kinesis stream writer')
     writer = StreamWriter(stream_name)
 
@@ -56,13 +63,13 @@ def main(pg_dbname, pg_host, pg_port, pg_user, pg_sslmode, pg_slot_name, pg_slot
         formatter = get_formatter(message_formatter, pk_map,
                                   pg_slot_output_plugin, full_change, table_pat)
 
-        consume = Consume(formatter, writer)
+        consume = Consume(formatter, writer, operations)
 
         # Blocking. Responds to Control-C.
         reader.process_replication_stream(consume)
 
 class Consume(object):
-    def __init__(self, formatter, writer):
+    def __init__(self, formatter, writer, filter_operations):
         self.cum_msg_count = 0
         self.cum_msg_size = 0
         self.msg_window_size = 0
@@ -71,6 +78,10 @@ class Consume(object):
 
         self.formatter = formatter
         self.writer = writer
+        self.filter_operations = filter_operations
+
+    def should_send_to_kinesis(self, fmt_msg):
+        return fmt_msg.change.operation in self.filter_operations
 
     def __call__(self, change):
         self.cum_msg_count += 1
@@ -84,6 +95,9 @@ class Consume(object):
         progress_msg = 'xid: {:12} win_count:{:>10} win_size:{:>10}mb cum_count:{:>10} cum_size:{:>10}mb'
 
         for fmt_msg in fmt_msgs:
+            if not self.should_send_to_kinesis(fmt_msg):
+                fmt_msg = None
+
             did_put = self.writer.put_message(fmt_msg)
             if did_put:
                 change.cursor.send_feedback(flush_lsn=change.data_start)
